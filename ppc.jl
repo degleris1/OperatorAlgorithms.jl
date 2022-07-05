@@ -67,6 +67,10 @@ function kernel0!(R, D)
     return 
 end
 
+function matmul(R, A, B)
+    CUDA.@sync R .= A*B
+end
+
 function shortcut_gpu0!(R, D)
     NUM_THREADS = 16
     N = size(D, 2)
@@ -132,7 +136,7 @@ end
 # Benchmark Code
 # =====
 
-N = 1000
+N = 1024
 FLOPS = N^3 * 2
 tm(b) = BenchmarkTools.mean(b).time
 gflops(b) = FLOPS / (tm(b) / 1e9) / 1e9
@@ -164,5 +168,8 @@ b_gpu0 = @benchmark shortcut_gpu0!($Rg, $Dg) seconds=1
 # b_gpu1 = @benchmark shortcut_gpu1!($Rg, $Dg) seconds=1
 # @show gflops(b_gpu1)
 
+Dg_T = CuArray(adjoint(D))
+b_mat = @benchmark matmul($Rg, $Dg_T, $Dg)
+@show gflops(b_mat)
 
 ;
