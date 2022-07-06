@@ -1,0 +1,9 @@
+name = "OperatorAlgorithms"
+uuid = "802f6288-8509-4508-bc20-f589516e6c73"
+authors = ["Anthony Degleris <degleris@stanford.edu>"]
+version = "0.1.0"
+
+[deps]
+Argos = "ef244971-cf80-42b0-9762-2c2c832df5d5"
+Artifacts = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
+NLPModels = "a4795742-8479-5a88-8948-cc11e1c8c1a6"
