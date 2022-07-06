@@ -20,8 +20,8 @@ function inequality_constraints(nlp, u)
     c_min, c_max = get_lcon(nlp), get_ucon(nlp)
 
     # Get indices with real constraints (not Inf)
-    jl, jm, ju = nlp.meta.jlow, nlp.meta.jrng, nlp.meta.jhigh
-    
+    jl, ju = _inequality_indices(nlp)  
+
     # Throw an error if there are equality constraints
     # (Currently unsupported)
     @assert length(nlp.jfix) == 0
@@ -29,8 +29,6 @@ function inequality_constraints(nlp, u)
     hu = cons(nlp, u)
     return [
         c_min[jl] - hu[jl];
-        c_min[jm] - hu[jm];
-        hu[jm] - c_max[jm];
         hu[ju] - c_max[ju];
     ]
 end
@@ -39,10 +37,29 @@ end
     inequality_jacobian(nlp, u)
 """
 function inequality_jacobian(nlp, u)
-    error()
+    jl, ju = _inequality_indices(nlp)
+    J = jac(nlp, u)
+
+    return [
+        -J[jl, :];
+        J[ju, :];
+    ]
 end
 
-        
+function dim_constraints(nlp)
+    jl, ju = _inequality_indices(nlp)
+    return length(jl) + length(ju)
+end
+
+function dim_variables(nlp)
+    return get_nvar(nlp)
+end
+
+function _inequality_indices(nlp)
+    jl, jm, ju = nlp.meta.jlow, nlp.meta.jrng, nlp.meta.jupp
+
+    return [jl; jm], [jm; ju]
+end
 
 
 
