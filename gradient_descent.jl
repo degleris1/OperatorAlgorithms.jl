@@ -12,7 +12,7 @@ nlp_opt = Argos.ReducedSpaceEvaluator(datafile)
 # Baseline solution
 opt = Ipopt.Optimizer()
 MOI.set(opt, MOI.RawOptimizerAttribute("hessian_approximation"), "limited-memory")
-MOI.set(opt, MOI.RawOptimizerAttribute("tol"), 1e-9)
+MOI.set(opt, MOI.RawOptimizerAttribute("tol"), 1e-4)
 MOI.set(opt, MOI.RawOptimizerAttribute("print_level"), 0)
 
 solution = Argos.optimize!(opt, nlp_opt)
@@ -28,6 +28,7 @@ u = Argos.initial(nlp)
 Argos.update!(nlp, u)
 
 @show Argos.objective(nlp, u)
+println()
 
 function feasibility(nlp, u)
     return [
@@ -37,22 +38,23 @@ function feasibility(nlp, u)
 end
 
 # Descent
-function descent!(u, nlp; η=1e-5, α=1e-5, num_iter=300)
+function descent!(u, nlp; η=1e-5, α=1e-6, ρ=50.0, num_iter=550)
     J0 = Argos.jacobian(nlp, u)
     m, n = size(J0)
     λmin, λmax = zeros(m), zeros(m)
-    Jtλ = zeros(n)
 
-    history = []
+    history = Real[]
     for iter in 1:num_iter
-        # J^T * λ
-        Argos.jtprod!(nlp, Jtλ, u, λmax - λmin)
+        # Constraint penalty
+        J = Argos.jacobian(nlp, u)
+        h = max.(0, feasibility(nlp, u))
+        penalty = ρ * J' * (h[1:m] + h[m+1:end]) + J' * (λmax - λmin)
         
         # ∇f
         ∇f = Argos.gradient(nlp, u)
         
         # Descend and project
-        u .-= η * (∇f + Jtλ)
+        u .-= η * (∇f + penalty)
         u .= clamp(u, nlp.u_min, nlp.u_max)
 
         Argos.update!(nlp, u)
@@ -65,8 +67,6 @@ function descent!(u, nlp; η=1e-5, α=1e-5, num_iter=300)
         λmax .+= α * (hu - nlp.g_max)
         λmax .= max.(0, λmax)
     end
-
-    @show norm(λmin), norm(λmax)
     return u, history
 end
 
