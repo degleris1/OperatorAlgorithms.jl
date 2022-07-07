@@ -1,14 +1,34 @@
 # Useful functions that build upon the NLPModels API
 
-"""
-    project_onto_box!(nlp, u)
+function get_objective(nlp, u, λ)
+    return obj(nlp, u)
+end
 
-Project `u` onto the box `[u_min, u_max]`.
+function get_dual_residual(nlp, u, λ)
+    J = inequality_jacobian(nlp, u)
+    
+    ∇f = similar(u)
+    grad!(nlp, u, ∇f)
+    
+    return ∇f + J' * λ
+end
+
+function get_primal_residual(nlp, u, λ)
+    return max.(0, inequality_constraints(nlp, u))
+end
+
 """
-function project_onto_box!(nlp, u)
+    project!(nlp, u, λ)
+
+Project `u` onto the box `[u_min, u_max]` and `λ` onto the nonnegative orthant.
+"""
+function project!(nlp, u, λ)
     u_min, u_max = get_lvar(nlp), get_uvar(nlp)
     u .= clamp.(u, u_min, u_max)
-    return u
+
+    λ .= max.(0, λ)
+
+    return u, λ
 end
 
 """
@@ -24,9 +44,11 @@ function inequality_constraints(nlp, u)
 
     # Throw an error if there are equality constraints
     # (Currently unsupported)
-    @assert length(nlp.jfix) == 0
+    @assert length(nlp.meta.jfix) == 0
 
-    hu = cons(nlp, u)
+    hu = zeros(nlp.meta.ncon)
+    cons!(nlp, u, hu)
+
     return [
         c_min[jl] - hu[jl];
         hu[ju] - c_max[ju];
@@ -46,6 +68,12 @@ function inequality_jacobian(nlp, u)
     ]
 end
 
+function gradient(nlp, u)
+    ∇f = similar(u)
+    grad!(nlp, u, ∇f)
+    return ∇f
+end
+
 function dim_constraints(nlp)
     jl, ju = _inequality_indices(nlp)
     return length(jl) + length(ju)
@@ -53,6 +81,10 @@ end
 
 function dim_variables(nlp)
     return get_nvar(nlp)
+end
+
+function get_var(nlp, u, λ)
+    return deepcopy(u), deepcopy(λ)
 end
 
 function _inequality_indices(nlp)
