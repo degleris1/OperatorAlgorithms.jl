@@ -19,43 +19,45 @@ Base.@kwdef mutable struct Dommel <: AbstractOptimizer
     update_dual = true
 end
 
-function step!(alg::Dommel, nlp, u, λ)
+function step!(alg::Dommel, P::EqualityBoxProblem, x, y)
     (; η, ρ, max_rel_step_length, update_dual) = alg
 
+    ∇f = gradient(P, x)
+    h = constraints(P, x)
+    Jh = jacobian(P, x)
+
     # Get gradient of objective and of quadratic constraint penalty
-    # The quadratic penalty is (1/2) * || diag(sqrt(s)) * h(u)_+ ||_2^2
-    # Which has gradient Jh(u)_+^T * diag(s) * h(u)_+
-    # Where s is a vector of weights (by default, s = ρ I)
+    # The quadratic penalty is (1/2) * ρ * || h(u) ||_2^2
+    # Which has gradient ρ * Jh(u)^T * h(u)
 
-    ∇f = gradient(nlp, u)
-    h = inequality_constraints(nlp, u)
-    Jh = inequality_jacobian(nlp, u)
-
-    # Account for inactive constraints
-    inactive_set = (h .< 0)
-    active_set = (h .>= 0)
-    hp = relu(h)
-    Jh[inactive_set, :] .= 0
-
+    # We use (1/sqrt(ρ)) and sqrt(ρ) to improve stability
+    if ρ > 1
+        ρ1, ρ2 = (1/sqrt(ρ)), sqrt(ρ)
+    else
+        ρ1, ρ2 = 1, ρ
+    end
+    Δx = η * (ρ1 * ∇f + ρ2 * Jh' * h)
+    
+    # Save this for reporting information
+    _Δx = deepcopy(Δx) / η
+ 
     # Adjust step length if needed
-    Δu = η * (∇f + ρ * Jh' * hp)
-    if norm(Δu) > max_rel_step_length*norm(u)
-        Δu *= max_rel_step_length * norm(u) / norm(Δu)
+    if norm(Δx) > max_rel_step_length*norm(x)
+        Δx *= max_rel_step_length * norm(x) / norm(Δx)
     end
 
     # Update
-    @. u -= Δu
+    @. x -= Δx
 
     # (Side-effect) Update dual variable
     # (This is just to accuractely keep track of the dual residual)
-    # Since the Lagrangian is L(u, λ) = f(u) + λ' * h(u)
-    # At an optimum, we have 0 = ∇f(u) + Jh(u)' * λ
-    # So λ = - pinv(Jh(u)') * ∇f(u)
+    # The 'psuedo'-dual variable should be ρ*h
     if update_dual
-        λ[active_set] .= -pinv(Matrix(Jh[active_set, :])') * ∇f
-        λ[inactive_set] .= 0
+        y .= ρ*h
     end
 
     # Project
-    project!(nlp, u, λ) 
+    project_box!(P, x) 
+
+    return _Δx
 end

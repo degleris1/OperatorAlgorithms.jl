@@ -1,14 +1,17 @@
 using Pkg; Pkg.activate(@__DIR__)
 using LinearAlgebra
+using UnicodePlots
 
 using Revise
 using OperatorAlgorithms
 
-nlp = load_case("case9.m")
+opf = load_dc("case3.m")
+P = EqualityBoxProblem(opf)
 
-alg = Dommel(max_iter=10_000, η=1e-4, ρ=1e4)
-u, λ, history, alg = optimize!(alg, nlp)
+alg = Dommel(max_iter=100_000, η=1e-5, ρ=1e4, max_rel_step_length=1.0)
+x, y, history, alg = optimize!(alg, P)
 
-@show norm.(history.dual_residual)[end-4:end]
-@show norm.(history.primal_residual)[end-4:end]
-;
+@show last(norm.(history.alg))
+@show norm.(history.dual_residual)[[1, 2, end-1, end]]
+@show norm.(history.primal_residual)[[1, 2, end-1, end]]
+lineplot(norm.(history.alg))

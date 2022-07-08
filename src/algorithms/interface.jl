@@ -4,30 +4,39 @@
 # ====
 
 Base.@kwdef mutable struct History
+    alg = []
     primal_residual = []
     dual_residual = []
-    objective = []
+    objective::Vector{Real} = []
     variable = []
     ignore::Vector{Symbol} = []
     num_iter::Int = -1
 end
 
-function initialize!(history::History, nlp, u, λ)
-    update!(history, nlp, u, λ)
+function initialize!(history::History, prob, x, y)
+    update!(history, prob, x, y, nothing)
 end
 
-function update!(history::History, nlp, u, λ)
+function update!(history::History, prob, x, y, alg_info)
 
     KEYS = [:primal_residual, :dual_residual, :objective, :variable]
-    fs = [get_primal_residual, get_dual_residual, get_objective, get_var]
+    fs = [
+        primal_residual, 
+        dual_residual, 
+        (p, x, y) -> objective(p, x), 
+        (p, x, y) -> Array(get_true_vars(p, x))
+    ]
 
     for (k, f) in zip(KEYS, fs)
         if !(k in history.ignore)
             data = getproperty(history, k)
-            push!(data, f(nlp, u, λ))
+            push!(data, f(prob, x, y))
         end
     end
 
+    if !isnothing(alg_info)
+        push!(history.alg, alg_info)
+    end
     history.num_iter += 1
 
     return history
@@ -39,27 +48,30 @@ end
 
 abstract type AbstractOptimizer end
 
-initialize!(alg::AbstractOptimizer, nlp) = get_x0(nlp), zeros(dim_constraints(nlp))
+initialize!(alg::AbstractOptimizer, P::EqualityBoxProblem) = initialize(P), zeros(num_con(P))
 
-converged(alg::AbstractOptimizer, history::History, nlp, u, λ) = history.num_iter >= alg.max_iter
+converged(alg::AbstractOptimizer, history::History, P::EqualityBoxProblem, x, y) = 
+    (history.num_iter >= alg.max_iter)
 
-step!(alg::AbstractOptimizer, nlp, u, λ) = error("Please implement!")
+step!(alg::AbstractOptimizer, P::EqualityBoxProblem, x, y) = error("Please implement!")
 
-function optimize!(alg::AbstractOptimizer, nlp; u0=nothing, λ0=nothing, history=History())
+function optimize!(alg::AbstractOptimizer, P::EqualityBoxProblem; 
+    u0=nothing, λ0=nothing, history=History()
+)
 
     # Initialize
-    u, λ = deepcopy(something.((u0, λ0), initialize!(alg, nlp)))
-    initialize!(history, nlp, u, λ)
+    x, y = deepcopy(something.((u0, λ0), initialize!(alg, P)))
+    initialize!(history, P, x, y)
 
-    while !converged(alg, history, nlp, u, λ)
+    while !converged(alg, history, P, x, y)
         # Run one iteration of the algorithm
-        step!(alg, nlp, u, λ)
+        alg_info = step!(alg, P, x, y)
 
         # Record info
-        update!(history, nlp, u, λ)
+        update!(history, P, x, y, alg_info)
     end
 
-    return u, λ, history, alg
+    return x, y, history, alg
 end
 
 
