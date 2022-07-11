@@ -1,9 +1,13 @@
-struct EqualityBoxProblem
+abstract type EqualityBoxProblem end
+
+struct StandardEqualityBoxProblem <: EqualityBoxProblem
     nlp
 end
 
+EqualityBoxProblem(nlp) = StandardEqualityBoxProblem(nlp)
+
 function lagrangian(P::EqualityBoxProblem, x, y)
-    error()
+    return objective(P, x) + y' * constraints(P, x)
 end
 
 function primal_residual(P::EqualityBoxProblem, x, y)

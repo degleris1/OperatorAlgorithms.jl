@@ -2,7 +2,7 @@ module OperatorAlgorithms
 
 # Exports
 export load_dc
-export EqualityBoxProblem
+export EqualityBoxProblem, augment
 export optimize!, History
 export Dommel
 
@@ -26,12 +26,14 @@ using NLPModels: cons!, jac
 using NLPModelsIpopt: ipopt
 
 # Code
-include("utils.jl")
-# include("interface.jl")
-include("eqprob.jl")
-include("data.jl")
-include("ipopt.jl")
+include("model/eqprob.jl")
+include("model/augmented.jl")
+
 include("algorithms/interface.jl")
 include("algorithms/dommel.jl")
+
+include("utils.jl")
+include("data.jl")
+include("ipopt.jl")
 
 end

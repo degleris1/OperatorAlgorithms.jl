@@ -6,9 +6,13 @@ using Revise
 using OperatorAlgorithms
 
 opf = load_dc("case3.m")
-P = EqualityBoxProblem(opf)
 
-alg = Dommel(max_iter=100_000, η=1e-5, ρ=1e4, max_rel_step_length=1.0)
+# Baseline
+# stats = OperatorAlgorithms.ipopt(opf)
+
+# Algorithm
+P = augment(EqualityBoxProblem(opf), 1e4)
+alg = Dommel(max_iter=10_000, η=2e-5, max_rel_step_length=1.0, update_dual=true)
 x, y, history, alg = optimize!(alg, P)
 
 @show last(norm.(history.alg))
