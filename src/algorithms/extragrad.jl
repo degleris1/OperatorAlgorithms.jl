@@ -1,5 +1,5 @@
 """
-    Dommel <: AbstractOptimizer
+    ExtraGrad <: AbstractOptimizer
 
 Solves problem via gradient descent on f(x) + ρ * || h(u)_+ ||₂²
 
@@ -8,35 +8,34 @@ Solves problem via gradient descent on f(x) + ρ * || h(u)_+ ||₂²
 - `η = 1.0`: step size
 - `max_rel_step_length = 0.25`: trust parameter dictating the maximum step length relative to
     ||x||
-- `update_dual = true`: whether or not to report a guess of the dual variable
 """
-Base.@kwdef mutable struct Dommel <: AbstractOptimizer
+Base.@kwdef mutable struct ExtraGrad <: AbstractOptimizer
     max_iter::Int = 10
     η = 1.0
     max_rel_step_length = 0.25
-    update_dual = true
 end
 
-function step!(alg::Dommel, P::EqualityBoxProblem, x, y)
-    (; η, max_rel_step_length, update_dual) = alg
-
-    # Get the gradient of the Lagrangian with respect to x and y
+function step!(alg::ExtraGrad, P::EqualityBoxProblem, x, y)
+    (; η, max_rel_step_length) = alg
+    
+    # Get extrapolated point
     ∇L_x = dual_residual(P, x, y)
     ∇L_y = primal_residual(P, x, y)
     
-    # Adjust step length if needed
-    Δx = η * ∇L_x
+    x̃ = x - η * ∇L_x
+    ỹ = y + η * ∇L_y
+
+    # Recompute gradient at extrapolated point
+    ∇L_x̃ = dual_residual(P, x̃, ỹ)
+    ∇L_ỹ = primal_residual(P, x̃, ỹ)
+
+    Δx, Δy = η * ∇L_x̃, η * ∇L_ỹ
     clip_step!(Δx, x, max_rel_step_length)
+    clip_step!(Δy, y, max_rel_step_length)
 
-    # Update
+    # Finally, take a step
     @. x -= Δx
-
-    # Update dual variable
-    if update_dual
-        Δy = η * ∇L_y
-        clip_step!(Δy, y, max_rel_step_length)
-        y .+= Δy
-    end
+    @. y += Δy
 
     # Project
     project_box!(P, x)

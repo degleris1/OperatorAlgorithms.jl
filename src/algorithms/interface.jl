@@ -7,6 +7,8 @@ Base.@kwdef mutable struct History
     alg = []
     primal_residual = []
     dual_residual = []
+    primal_infeasibility::Vector{Real} = []
+    dual_infeasibility::Vector{Real} = []
     objective::Vector{Real} = []
     variable = []
     ignore::Vector{Symbol} = []
@@ -15,6 +17,10 @@ end
 
 function initialize!(history::History, prob, x, y)
     update!(history, prob, x, y, nothing)
+end
+
+function distance(history::History, x_opt)
+    return [norm(xi[1:length(x_opt)] - x_opt) for xi in history.variable]
 end
 
 function update!(history::History, prob, x, y, alg_info)
@@ -33,6 +39,9 @@ function update!(history::History, prob, x, y, alg_info)
             push!(data, f(prob, x, y))
         end
     end
+
+    push!(history.primal_infeasibility, norm(history.primal_residual[end]))
+    push!(history.dual_infeasibility, normal_cone_distance(prob, x, history.dual_residual[end]))
 
     if !isnothing(alg_info)
         push!(history.alg, alg_info)

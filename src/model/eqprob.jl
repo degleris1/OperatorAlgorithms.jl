@@ -21,8 +21,14 @@ function dual_residual(P::EqualityBoxProblem, x, y)
     return ∇f + Jh' * y
 end
 
-function normal_cone(P::EqualityBoxProblem)
-    error()
+function normal_cone_distance(P::EqualityBoxProblem, x, v; tol=1e-5)
+    x_min, x_max = get_box(P)
+
+    # Find binding constraints
+    binding = (abs.(x_min - x) .< tol) .| (abs.(x_max - x) .< tol)
+
+    # Compute error in the non-bound components
+    return norm(v[.! binding])
 end
 
 function objective(P::EqualityBoxProblem, x)
