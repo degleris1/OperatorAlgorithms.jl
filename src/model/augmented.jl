@@ -13,7 +13,13 @@ function Base.getproperty(P::AugmentedEqualityBoxProblem, s::Symbol)
 end
 
 function augment(P::StandardEqualityBoxProblem, ρ) 
-    return AugmentedEqualityBoxProblem(P, 1/sqrt(ρ), sqrt(ρ))
+    if ρ > 1
+        ρ1, ρ2 = 1/sqrt(ρ), sqrt(ρ)
+    else
+        ρ1, ρ2 = 1, ρ
+    end
+
+    return AugmentedEqualityBoxProblem(P, 1/ρ1, ρ2)
 end
 
 function gradient(P::AugmentedEqualityBoxProblem, x)

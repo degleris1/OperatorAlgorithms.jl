@@ -11,8 +11,18 @@ Base.@kwdef mutable struct History
     dual_infeasibility::Vector{Real} = []
     objective::Vector{Real} = []
     variable = []
+    x = []
+    y = []
     ignore::Vector{Symbol} = []
     num_iter::Int = -1
+end
+
+function Base.getproperty(h::History, s::Symbol)
+    if s == :infeasibility
+        return h.primal_infeasibility + h.dual_infeasibility
+    else
+        return getfield(h, s)
+    end
 end
 
 function initialize!(history::History, prob, x, y)
@@ -25,12 +35,14 @@ end
 
 function update!(history::History, prob, x, y, alg_info)
 
-    KEYS = [:primal_residual, :dual_residual, :objective, :variable]
+    KEYS = [:primal_residual, :dual_residual, :objective, :variable, :x, :y]
     fs = [
         primal_residual, 
         dual_residual, 
         (p, x, y) -> objective(p, x), 
-        (p, x, y) -> Array(get_true_vars(p, x))
+        (p, x, y) -> Array(get_true_vars(p, x)),
+        (p, x, y) -> deepcopy(x),
+        (p, x, y) ->  deepcopy(y),
     ]
 
     for (k, f) in zip(KEYS, fs)
@@ -40,8 +52,10 @@ function update!(history::History, prob, x, y, alg_info)
         end
     end
 
-    push!(history.primal_infeasibility, norm(history.primal_residual[end]))
-    push!(history.dual_infeasibility, normal_cone_distance(prob, x, history.dual_residual[end]))
+    push!(history.primal_infeasibility, 
+          norm(history.primal_residual[end]) / norm(x))
+    push!(history.dual_infeasibility, 
+          normal_cone_distance(prob, x, history.dual_residual[end]) / norm(gradient(prob, x)))
 
     if !isnothing(alg_info)
         push!(history.alg, alg_info)
