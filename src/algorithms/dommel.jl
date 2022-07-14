@@ -16,36 +16,57 @@ Base.@kwdef mutable struct Dommel <: AbstractOptimizer
     η = 1.0
     α = nothing
     max_rel_step_length = 0.25
-    update_dual = true
+
+    # State
+    _rd = nothing
+    _rp = nothing
+    _g = nothing
+end
+
+function initialize!(alg::Dommel, P::EqualityBoxProblem)
+    x, y = initialize(P), zeros(num_con(P))
+
+    # Set dual step size
+    alg.α = something(alg.α, alg.η)
+
+    # Update residual vectors
+    alg._g = similar(x)
+    gradient!(alg._g, P, x)
+
+    alg._rd = similar(x)
+    dual_residual!(alg._rd, P, x, y, alg._g)
+
+    alg._rp = similar(y)
+    primal_residual!(alg._rp, P, x, y)
+
+    return x, y
 end
 
 function step!(alg::Dommel, P::EqualityBoxProblem, x, y)
-    (; η, α, max_rel_step_length, update_dual) = alg
+    (; η, α, max_rel_step_length, _g, _rp, _rd) = alg
 
-    α = something(α, η)
+    # Important:
+    # At each step, we assume the residuals have already been computed
+    ∇L_x = _rd
+    ∇L_y = _rp
 
-    # Get the gradient of the Lagrangian with respect to x and y
-    ∇L_x = dual_residual(P, x, y)
-    ∇L_y = primal_residual(P, x, y)
-    
-    # Adjust step length if needed
-    Δx = η * ∇L_x
-    clip_step!(Δx, x, max_rel_step_length)
+    # Get infeasibility
+    pp = norm(∇L_y) / (1+norm(x))
+    dd = normal_cone_distance(P, x, ∇L_x) / (1+norm(y))
 
     # Update
-    @. x -= Δx
-
-    # Update dual variable
-    if update_dual
-        Δy = α * ∇L_y
-        clip_step!(Δy, y, max_rel_step_length)
-        y .+= Δy
-    end
+    @. x -= η * ∇L_x
+    @. y += α * ∇L_y
 
     # Project
     project_box!(P, x)
 
-    return 0
+    # Update
+    gradient!(_g, P, x)
+    primal_residual!(_rp, P, x, y)
+    dual_residual!(_rd, P, x, y, _g)
+
+    return (primal_infeasibility=pp, dual_infeasibility=dd)
 end
 
 function clip_step!(Δx, x, max_rel_step_length)

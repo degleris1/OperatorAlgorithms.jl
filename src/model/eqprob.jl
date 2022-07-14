@@ -14,6 +14,10 @@ function primal_residual(P::EqualityBoxProblem, x, y)
     return constraints(P, x)
 end
 
+function primal_residual!(rp, P::EqualityBoxProblem, x, y)
+    return constraints!(rp, P, x)
+end
+
 function dual_residual(P::EqualityBoxProblem, x, y)
     ∇f = gradient(P, x)
     Jh = jacobian(P, x)
@@ -21,14 +25,28 @@ function dual_residual(P::EqualityBoxProblem, x, y)
     return ∇f + Jh' * y
 end
 
+function dual_residual!(rd, P::EqualityBoxProblem, x, y, g)
+    # Compute ∇f + Jh' y
+    
+    # First, compute Jh' * y
+    jacobian_transpose_product!(rd, P, x, y)
+
+    # Then add ∇f
+    rd .+= g
+
+    return rd
+end
+
+
+# TODO Optimize
 function normal_cone_distance(P::EqualityBoxProblem, x, v; tol=1e-5)
     x_min, x_max = get_box(P)
-
+ 
     # Find binding constraints
-    binding = (abs.(x_min - x) .< tol) .| (abs.(x_max - x) .< tol)
+    not_binding = @. (abs(x_min - x) > tol) & (abs(x_max - x) > tol)
 
     # Compute error in the non-bound components
-    return norm(v[.! binding])
+    return norm(v[not_binding])
 end
 
 function objective(P::EqualityBoxProblem, x)
@@ -45,6 +63,13 @@ function constraints(P::EqualityBoxProblem, x)
     return hu - s
 end
 
+function constraints!(hu, P::EqualityBoxProblem, x)
+    u, s = get_true_vars(P, x), get_slack_vars(P, x)
+    cons!(P.nlp, u, hu)
+    hu .-= s
+    return hu
+end
+
 function gradient(P::EqualityBoxProblem, x)
     u = get_true_vars(P, x)
     
@@ -54,6 +79,19 @@ function gradient(P::EqualityBoxProblem, x)
     return [∇f; zeros(num_con(P))]
 end
 
+function gradient!(∇f, P::EqualityBoxProblem, x)
+    n = num_true_var(P)
+
+    # Update main variables
+    u = view(x, 1:n)
+    grad!(P.nlp, u, view(∇f, 1:n))
+
+    # Update slack variables
+    ∇f[n+1:end] .= 0
+
+    return x
+end
+
 function jacobian(P::EqualityBoxProblem, x)
     u = get_true_vars(P, x)
     
@@ -61,9 +99,22 @@ function jacobian(P::EqualityBoxProblem, x)
     return hcat(J, -I)
 end
 
+function jacobian_transpose_product!(Jtv, P::EqualityBoxProblem, x, v)
+    u, s = get_true_vars(P, x), get_slack_vars(P, x)
+    n = num_true_var(P)
+
+    jtprod!(P.nlp, u, v, view(Jtv, 1:n))
+    Jtv[n+1:end] .= s
+
+    return Jtv
+end
+
 function project_box!(P::EqualityBoxProblem, x)
-    x_min, x_max = get_box(P)
-    x .= clamp.(x, x_min, x_max)
+    n = num_true_var(P)
+    m = num_con(P)
+
+    x[1:n] .= clamp.(view(x, 1:n), get_lvar(P.nlp), get_uvar(P.nlp))
+    x[n+1:end] .= clamp.(view(x, n+1:n+m), get_lcon(P.nlp), get_ucon(P.nlp))
 
     return x
 end

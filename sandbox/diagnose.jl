@@ -1,6 +1,6 @@
 include("util.jl")
 
-opf = load_dc("case300.m")
+opf = load_dc("case118.m")
 
 # Baseline
 stats = solve_ipopt(opf)
@@ -13,10 +13,11 @@ A = Dommel
 α = 1.0
 
 # Algorithm
-history = History(ignore=[:x, :y])
+history = History(force=[:variable])
 P = augment(EqualityBoxProblem(opf), ρ)
-alg = A(max_iter=10_000, η=η, α=α, max_rel_step_length=1.0)
+alg = A(max_iter=100_000, η=η, α=α, max_rel_step_length=Inf)
 @time x, y, history, alg = optimize!(alg, P, history=history)
+# @profile optimize!(alg, P, history=history)
 
 @show minimum(history.dual_infeasibility[end-100:end])
 @show minimum(history.primal_infeasibility[end-100:end])

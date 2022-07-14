@@ -1,11 +1,11 @@
 module OperatorAlgorithms
 
 # Exports
-export load_dc
+export load_dc, write_mps_dc
 export solve_ipopt
 export EqualityBoxProblem, augment
 export optimize!, History, distance
-export Dommel, ExtraGrad
+export Dommel
 
 # Imports
 # Data Loading
@@ -13,10 +13,9 @@ using Artifacts
 using Argos: ReducedSpaceEvaluator, OPFModel
 using NLPModelsJuMP: MathOptNLPModel
 using PowerModels: instantiate_model, DCMPPowerModel, build_opf
-
-# Suppress all those warnings!
+import MathOptInterface
 import PowerModels
-PowerModels.Memento.config!("error")
+MOI = MathOptInterface
 
 # Utilities
 using LinearAlgebra: norm, pinv, I
@@ -25,7 +24,7 @@ using LinearAlgebra: norm, pinv, I
 using NLPModels: get_x0, get_nvar, get_ncon
 using NLPModels: get_lvar, get_uvar, get_lcon, get_ucon
 using NLPModels: obj, grad!
-using NLPModels: cons!, jac
+using NLPModels: cons!, jac, jtprod!
 
 # Solvers
 using NLPModelsIpopt: ipopt
@@ -34,6 +33,7 @@ using NLPModelsIpopt: ipopt
 include("model/eqprob.jl")
 include("model/augmented.jl")
 
+include("algorithms/history.jl")
 include("algorithms/interface.jl")
 include("algorithms/dommel.jl")
 include("algorithms/extragrad.jl")

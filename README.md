@@ -11,7 +11,7 @@ min_u		f(u)
 such that	u0 <= u <= u1
 		c0 <= c(u) <= c1
 ```
-These problems are then converted into a standard form.
+These problems are then converted into a different standard form.
 Specifically, we introduce a slack variable `s` and define `x = [u; s]`, then solve,
 ```
 min_x		g(x)
@@ -25,5 +25,5 @@ Finally, we rewrite the above problem as
 min_x		g(x) + I(B, x)
 such that	h(x) = 0
 ```
-where `I_B(x)` is the indicator function on the box `[x0, x1]`.
+where `I_B(x)` is the indicator function on the box `B = [x0, x1]`.
 The equality constraint is assigned a dual variable `y`.

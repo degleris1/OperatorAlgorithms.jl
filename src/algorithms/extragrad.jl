@@ -20,6 +20,11 @@ end
 function step!(alg::ExtraGrad, P::EqualityBoxProblem, x, y)
     (; η, α, max_rel_step_length) = alg
 
+    error("Deprecated")
+
+
+
+
     α = something(α, η)
     
     # Get extrapolated point
