@@ -19,14 +19,14 @@ function print_diagnostics(h, x_opt)
     @show distance(h, x_opt)[[1, end]]
 end
 
-function plot_diagnostics(history, x_opt, height=5, width=20, start=10)
+function plot_diagnostics(history, x_opt; height=5, width=20, start=10)
     ucp = (
         extra_kwargs=Dict(:subplot => (; height=height, width=width)), 
         #ylim=(0, Inf),
     )
     plt = plot(
-        plot(history.primal_infeasibility[start:end]; ylabel="pinf", ucp...),
-        plot(history.dual_infeasibility[start:end]; ylabel="dinf", ucp...),
+               plot(log.(history.primal_infeasibility[start:end]); ylabel="pinf", ucp...),
+               plot(log.(history.dual_infeasibility[start:end]); ylabel="dinf", ucp...),
         plot(distance(history, x_opt)[start:end] / norm(x_opt); ylabel="x - x_opt", ucp...),
         plot(history.infeasibility[start:end]; ylabel="inf", ucp...),
         layout = (2, 2),

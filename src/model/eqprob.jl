@@ -15,7 +15,8 @@ function primal_residual(P::EqualityBoxProblem, x, y)
 end
 
 function primal_residual!(rp, P::EqualityBoxProblem, x, y)
-    return constraints!(rp, P, x)
+    constraints!(rp, P, x)
+    return rp
 end
 
 function dual_residual(P::EqualityBoxProblem, x, y)

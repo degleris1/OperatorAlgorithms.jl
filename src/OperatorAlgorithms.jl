@@ -5,7 +5,7 @@ export load_dc, write_mps_dc
 export solve_ipopt
 export EqualityBoxProblem, augment
 export optimize!, History, distance
-export Dommel
+export Dommel, Momentum, Adagrad
 
 # Imports
 # Data Loading
@@ -35,8 +35,11 @@ include("model/augmented.jl")
 
 include("algorithms/history.jl")
 include("algorithms/interface.jl")
+
 include("algorithms/dommel.jl")
-include("algorithms/extragrad.jl")
+include("algorithms/momentum.jl")
+include("algorithms/adagrad.jl")
+# include("algorithms/extragrad.jl")
 
 include("utils.jl")
 include("data.jl")
