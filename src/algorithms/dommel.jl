@@ -24,7 +24,7 @@ Base.@kwdef mutable struct Dommel <: AbstractOptimizer
 end
 
 function initialize!(alg::Dommel, P::EqualityBoxProblem)
-    x, y = initialize(P), zeros(num_con(P))
+    x, y = initialize(P) 
 
     # Set dual step size
     alg.α = something(alg.α, alg.η)

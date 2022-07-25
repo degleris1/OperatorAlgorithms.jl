@@ -28,7 +28,7 @@ Base.@kwdef mutable struct Adagrad <: AbstractOptimizer
 end
 
 function initialize!(alg::Adagrad, P::EqualityBoxProblem)
-    x, y = initialize(P), zeros(num_con(P))
+    x, y = initialize(P)
 
     # Set dual step size
     alg.α = something(alg.α, alg.η)
@@ -79,11 +79,3 @@ function step!(alg::Adagrad, P::EqualityBoxProblem, x, y)
 
     return (primal_infeasibility=pp, dual_infeasibility=dd)
 end
-
-function clip_step!(Δx, x, max_rel_step_length)
-    if norm(Δx) > max_rel_step_length*(1+norm(x))
-        Δx *= max_rel_step_length * (norm(x) / norm(Δx))
-    end
-    return Δx
-end
-

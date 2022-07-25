@@ -120,9 +120,9 @@ function project_box!(P::EqualityBoxProblem, x)
     return x
 end
 
-function initialize(P::EqualityBoxProblem)
-    return project_box!(P, [get_x0(P.nlp); zeros(num_con(P))])
-end
+#function initialize(P::EqualityBoxProblem)
+#    return project_box!(P, [get_x0(P.nlp); zeros(num_con(P))])
+#end
 
 function get_box(P::EqualityBoxProblem)
     x_min = [get_lvar(P.nlp); get_lcon(P.nlp)]

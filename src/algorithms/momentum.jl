@@ -27,7 +27,7 @@ Base.@kwdef mutable struct Momentum <: AbstractOptimizer
 end
 
 function initialize!(alg::Momentum, P::EqualityBoxProblem)
-    x, y = initialize(P), zeros(num_con(P))
+    x, y = initialize(P)
 
     # Set dual step size
     alg.α = something(alg.α, alg.η)

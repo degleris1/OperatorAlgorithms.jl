@@ -1,7 +1,7 @@
 module OperatorAlgorithms
 
 # Exports
-export load_dc, write_mps_dc
+export load_dc, write_mps_dc, load_toy
 export solve_ipopt
 export EqualityBoxProblem, augment
 export optimize!, History, distance
@@ -13,8 +13,11 @@ using Artifacts
 using Argos: ReducedSpaceEvaluator, OPFModel
 using NLPModelsJuMP: MathOptNLPModel
 using PowerModels: instantiate_model, DCMPPowerModel, build_opf
+using JuMP: @objective, @variable, @constraint
+
 import MathOptInterface
 import PowerModels
+import JuMP
 MOI = MathOptInterface
 
 # Utilities
