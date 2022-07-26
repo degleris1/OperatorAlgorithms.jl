@@ -33,6 +33,11 @@ function load_toy(case::Symbol)
         @variable(model, y >= 0)
         @constraint(model, x + y == 1)
         @objective(model, Min, 1e4x + y)
+
+    # This problem has an ill-conditioned constraint
+    # Specifically, very small perturbations in `x` affect the constraint
+    # How might we resolve this, in general?
+    # - If the constraints are linear, we could go through and rescale the constraints
     elseif case == :bad_constraint
         @variable(model, x >= 0)
         @variable(model, y >= 0)
