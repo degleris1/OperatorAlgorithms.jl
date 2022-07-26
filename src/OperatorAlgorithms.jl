@@ -5,11 +5,11 @@ export load_dc, write_mps_dc, load_toy
 export solve_ipopt
 export EqualityBoxProblem, augment
 export optimize!, History, distance
-export Dommel, Momentum, Adagrad
+export Dommel, Momentum, Adagrad, HybridGradient
 
 # Imports
 # Data Loading
-using Artifacts
+using LazyArtifacts
 using Argos: ReducedSpaceEvaluator, OPFModel
 using NLPModelsJuMP: MathOptNLPModel
 using PowerModels: instantiate_model, DCMPPowerModel, build_opf
@@ -42,6 +42,7 @@ include("algorithms/interface.jl")
 include("algorithms/dommel.jl")
 include("algorithms/momentum.jl")
 include("algorithms/adagrad.jl")
+include("algorithms/cp.jl")
 # include("algorithms/extragrad.jl")
 
 include("utils.jl")

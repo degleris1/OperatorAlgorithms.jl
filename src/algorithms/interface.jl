@@ -7,12 +7,14 @@ abstract type AbstractOptimizer end
 
 function initialize(P::EqualityBoxProblem)
     xmin, xmax = get_box(P)
-    xmin[xmin .== -Inf] .= xmax[xmin .== -Inf] .- 1
-    xmax[xmax .== Inf] .= xmin[xmax .== Inf] .+ 1
+    xmin[xmin .== -Inf] .= min.(-1, xmax[xmin .== -Inf] .- 1)
+    xmax[xmax .== Inf] .= max.(1, xmin[xmax .== Inf] .+ 1)
 
     x, y = zeros(num_var(P)), zeros(num_con(P))
     x .= rand(num_var(P)) .* (xmax - xmin) .+ xmin
     
+    @assert !any(isnan.(x))
+
     return x, y
 end
 
