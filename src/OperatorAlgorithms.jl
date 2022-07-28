@@ -4,7 +4,9 @@ module OperatorAlgorithms
 export load_dc, write_mps_dc, load_toy
 export solve_ipopt
 export EqualityBoxProblem, augment
+export precondition_cp, precondition_ruiz, precondition_cp_ruiz
 export optimize!, History, distance
+export FixedStep, AdaptiveStep, get_good_step
 export Dommel, Momentum, Adagrad, HybridGradient
 
 # Imports
@@ -21,7 +23,7 @@ import JuMP
 MOI = MathOptInterface
 
 # Utilities
-using LinearAlgebra: norm, pinv, I
+using LinearAlgebra: norm, pinv, I, opnorm, Diagonal
 
 # Modeling
 using NLPModels: get_x0, get_nvar, get_ncon
@@ -35,8 +37,10 @@ using NLPModelsIpopt: ipopt
 # Code
 include("model/eqprob.jl")
 include("model/augmented.jl")
+include("model/precond.jl")
 
 include("algorithms/history.jl")
+include("algorithms/step.jl")
 include("algorithms/interface.jl")
 
 include("algorithms/dommel.jl")

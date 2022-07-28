@@ -13,9 +13,8 @@ Solves problem via gradient descent on f(x) + ρ * || h(u)_+ ||₂²
 """
 Base.@kwdef mutable struct Dommel <: AbstractOptimizer
     max_iter::Int = 10
-    η = 1.0
-    α = nothing
-    max_rel_step_length = 0.25
+    η::AbstractStep = FixedStep(1.0)
+    α::AbstractStep = FixedStep(1.0)
 
     # State
     _rd = nothing
@@ -25,9 +24,6 @@ end
 
 function initialize!(alg::Dommel, P::EqualityBoxProblem)
     x, y = initialize(P) 
-
-    # Set dual step size
-    alg.α = something(alg.α, alg.η)
 
     # Update residual vectors
     alg._g = similar(x)
@@ -43,20 +39,19 @@ function initialize!(alg::Dommel, P::EqualityBoxProblem)
 end
 
 function step!(alg::Dommel, P::EqualityBoxProblem, x, y)
-    (; η, α, max_rel_step_length, _g, _rp, _rd) = alg
+    (; η, α, _g, _rp, _rd) = alg
 
     # Important:
     # At each step, we assume the residuals have already been computed
-    ∇L_x = _rd
-    ∇L_y = _rp
+    dx, dy = _rd, _rp
 
     # Get infeasibility
-    pp = norm(∇L_y) / (1+norm(x))
-    dd = normal_cone_distance(P, x, ∇L_x) / (1+norm(y))
+    pp = norm(dy) / (1+norm(x))
+    dd = normal_cone_distance(P, x, dx) / (1+norm(y))
 
     # Update
-    @. x -= η * ∇L_x
-    @. y += α * ∇L_y
+    step!(η, x, dx)
+    step!(α, y, dy)
 
     # Project
     project_box!(P, x)
@@ -69,10 +64,10 @@ function step!(alg::Dommel, P::EqualityBoxProblem, x, y)
     return (primal_infeasibility=pp, dual_infeasibility=dd)
 end
 
-function clip_step!(Δx, x, max_rel_step_length)
-    if norm(Δx) > max_rel_step_length*(1+norm(x))
-        Δx *= max_rel_step_length * (norm(x) / norm(Δx))
-    end
-    return Δx
-end
+# function clip_step!(Δx, x, max_rel_step_length)
+#     if norm(Δx) > max_rel_step_length*(1+norm(x))
+#         Δx *= max_rel_step_length * (norm(x) / norm(Δx))
+#     end
+#     return Δx
+# end
 

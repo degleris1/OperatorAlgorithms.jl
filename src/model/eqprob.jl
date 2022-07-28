@@ -16,6 +16,7 @@ end
 
 function primal_residual!(rp, P::EqualityBoxProblem, x, y)
     constraints!(rp, P, x)
+    @. rp = -rp
     return rp
 end
 

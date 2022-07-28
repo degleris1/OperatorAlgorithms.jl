@@ -28,7 +28,7 @@ end
 
 function initialize!(alg::Momentum, P::EqualityBoxProblem)
     x, y = initialize(P)
-
+    error("Deprecated")
     # Set dual step size
     alg.α = something(alg.α, alg.η)
 

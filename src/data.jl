@@ -7,8 +7,16 @@ function load_ac_reduced(case)
     return OPFModel(ReducedSpaceEvaluator(_get_datafile(case)))
 end
 
-function load_dc(case)
+function load_dc(case; make_linear=false)
     pm = instantiate_model(_get_datafile(case), DCMPPowerModel, build_opf)
+
+    if make_linear
+        # Remove quadratic coefficients
+        ldata = pm.data
+        PowerModels._standardize_cost_terms!(ldata["gen"], 2, "generator")
+        pm = instantiate_model(ldata, DCMPPowerModel, build_opf)
+    end
+
     return MathOptNLPModel(pm.model)
 end
 

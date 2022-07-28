@@ -29,7 +29,7 @@ end
 
 function initialize!(alg::Adagrad, P::EqualityBoxProblem)
     x, y = initialize(P)
-
+    error()
     # Set dual step size
     alg.α = something(alg.α, alg.η)
 

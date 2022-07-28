@@ -25,10 +25,10 @@ function plot_diagnostics(history, x_opt; height=5, width=20, start=10)
         #ylim=(0, Inf),
     )
     plt = plot(
-               plot(log.(history.primal_infeasibility[start:end]); ylabel="pinf", ucp...),
-               plot(log.(history.dual_infeasibility[start:end]); ylabel="dinf", ucp...),
+        plot(log10.(history.primal_infeasibility[start:end]); ylabel="pinf", ucp...),
+        plot(log10.(history.dual_infeasibility[start:end]); ylabel="dinf", ucp...),
         plot(distance(history, x_opt)[start:end] / norm(x_opt); ylabel="x - x_opt", ucp...),
-        plot(history.infeasibility[start:end]; ylabel="inf", ucp...),
+        plot(log10.(history.infeasibility[start:end]); ylabel="inf", ucp...),
         layout = (2, 2),
     )
     return plt

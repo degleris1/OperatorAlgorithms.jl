@@ -13,10 +13,9 @@ Solves problem via gradient descent on f(x) + ρ * || h(u)_+ ||₂²
 """
 Base.@kwdef mutable struct HybridGradient <: AbstractOptimizer
     max_iter::Int = 10
-    η = 1.0
-    α = nothing
+    η::AbstractStep = FixedStep(1.0)
+    α::AbstractStep = FixedStep(1.0)
     θ = 1.0
-    max_rel_step_length = 0.25
 
     # State
     _rd = nothing
@@ -30,10 +29,6 @@ function initialize!(alg::HybridGradient, P::EqualityBoxProblem)
     x, y = initialize(P)
 
     @assert 0 <= alg.θ <= 1
-    @assert alg.η >= 0
-
-    # Set dual step size
-    alg.α = something(alg.α, alg.η)
 
     # Update residual vectors
     alg._g = similar(x)
@@ -52,16 +47,15 @@ function initialize!(alg::HybridGradient, P::EqualityBoxProblem)
 end
 
 function step!(alg::HybridGradient, P::EqualityBoxProblem, x, y)
-    (; η, α, θ, max_rel_step_length, _g, _rp, _rd, _x̄, _rp̄) = alg
+    (; η, α, θ, _g, _rp, _rd, _x̄, _rp̄) = alg
 
     # Important:
     # At each step, we assume the residuals have already been computed
-    ∇L_x = _rd
-    ∇L_y = _rp
+    dx, dy = _rd, _rp
 
     # Get infeasibility
-    pp = norm(∇L_y) / (1+norm(x))
-    dd = normal_cone_distance(P, x, ∇L_x) / (1+norm(y))
+    pp = norm(dy) / (norm(x) + 1e-4)
+    dd = normal_cone_distance(P, x, dx) / (norm(_g) + 1e-4)
 
     # Main update
     
@@ -69,7 +63,7 @@ function step!(alg::HybridGradient, P::EqualityBoxProblem, x, y)
     @. _x̄ = -x
 
     # Update primal variable and project
-    @. x -= η * _rd
+    step!(η, x, dx)
     project_box!(P, x)
    
     # Finish updating x̄
@@ -77,7 +71,7 @@ function step!(alg::HybridGradient, P::EqualityBoxProblem, x, y)
     primal_residual!(_rp̄, P, _x̄, y)
 
     # Update dual variable
-    @. y += α * _rp̄
+    step!(α, y, _rp̄)
 
     # Update residuals
     gradient!(_g, P, x)
