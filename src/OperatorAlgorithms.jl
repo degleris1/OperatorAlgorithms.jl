@@ -7,7 +7,7 @@ export EqualityBoxProblem, augment
 export precondition_cp, precondition_ruiz, precondition_cp_ruiz
 export optimize!, History, distance
 export FixedStep, AdaptiveStep, get_good_step
-export Dommel, Momentum, Adagrad, HybridGradient
+export Dommel, HybridGradient, Restarted
 
 # Imports
 # Data Loading
@@ -44,9 +44,10 @@ include("algorithms/step.jl")
 include("algorithms/interface.jl")
 
 include("algorithms/dommel.jl")
-include("algorithms/momentum.jl")
-include("algorithms/adagrad.jl")
+# include("algorithms/momentum.jl")
+# include("algorithms/adagrad.jl")
 include("algorithms/cp.jl")
+include("algorithms/restart.jl")
 # include("algorithms/extragrad.jl")
 
 include("utils.jl")

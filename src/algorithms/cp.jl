@@ -25,9 +25,7 @@ Base.@kwdef mutable struct HybridGradient <: AbstractOptimizer
     _rp̄ = nothing
 end
 
-function initialize!(alg::HybridGradient, P::EqualityBoxProblem)
-    x, y = initialize(P)
-
+function initialize!(alg::HybridGradient, P::EqualityBoxProblem, x, y)
     @assert 0 <= alg.θ <= 1
 
     # Update residual vectors

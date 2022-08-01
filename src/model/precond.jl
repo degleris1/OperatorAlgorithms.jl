@@ -21,7 +21,7 @@ function primal_residual!(rp, P::PreconditionedProblem, x, y)
     # Return -Σ * h(x)
     constraints!(rp, P, x)
     @. rp *= -P.σ
-    
+
     return rp
 end
 

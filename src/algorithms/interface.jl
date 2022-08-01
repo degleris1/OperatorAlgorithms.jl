@@ -18,8 +18,8 @@ function initialize(P::EqualityBoxProblem)
     return x, y
 end
 
-function initialize!(alg::AbstractOptimizer, P::EqualityBoxProblem)
-    return initialize(P) 
+function initialize!(alg::AbstractOptimizer, P::EqualityBoxProblem, x, y)
+    return error()
 end
 
 function converged(alg::AbstractOptimizer, history::History, P::EqualityBoxProblem, x, y)
@@ -31,11 +31,12 @@ function step!(alg::AbstractOptimizer, P::EqualityBoxProblem, x, y)
 end
 
 function optimize!(alg::AbstractOptimizer, P::EqualityBoxProblem; 
-    u0=nothing, λ0=nothing, history=History()
+    x0=nothing, y0=nothing, history=History()
 )
 
     # Initialize
-    x, y = deepcopy(something.((u0, λ0), initialize!(alg, P)))
+    x, y = something.( deepcopy.( (x0, y0) ), initialize(P) )
+    initialize!(alg, P, x, y)
     initialize!(history, P, x, y)
 
     while !converged(alg, history, P, x, y)

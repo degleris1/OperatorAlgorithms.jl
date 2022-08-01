@@ -41,9 +41,12 @@ function step!(s::AdaptiveStep, x, dx)
     return x
 end
 
-function get_good_step(P::EqualityBoxProblem; ω=1, z=0.9)
+function get_good_step(P::EqualityBoxProblem; ω=:auto, z=0.9)
     x, y = initialize(P)
+    xmin, xmax = get_box(P)
+
     η = z / opnorm(Array(jacobian(P, x)))
+    ω = norm(gradient(P, x)) / (norm(xmin[xmin .!= -Inf]) + norm(xmax[xmax .!= Inf]))
 
     return FixedStep(η / ω), FixedStep(η * ω)
 end

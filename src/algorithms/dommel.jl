@@ -22,9 +22,7 @@ Base.@kwdef mutable struct Dommel <: AbstractOptimizer
     _g = nothing
 end
 
-function initialize!(alg::Dommel, P::EqualityBoxProblem)
-    x, y = initialize(P) 
-
+function initialize!(alg::Dommel, P::EqualityBoxProblem, x, y)
     # Update residual vectors
     alg._g = similar(x)
     gradient!(alg._g, P, x)
