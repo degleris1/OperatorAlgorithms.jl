@@ -14,23 +14,24 @@ function Base.getproperty(P::AugmentedEqualityBoxProblem, s::Symbol)
     end
 end
 
-function augment(P::StandardEqualityBoxProblem, ρ) 
+function augment(P::EqualityBoxProblem, ρ) 
     if ρ > 1
         ρ1, ρ2 = 1/sqrt(ρ), sqrt(ρ)
     else
         ρ1, ρ2 = 1, ρ
     end
+    ρ1, ρ2 = 1, ρ
 
     h = zeros(num_con(P))
     Jth = zeros(num_var(P))
 
-    return AugmentedEqualityBoxProblem(P, 1/ρ1, ρ2, h, Jth)
+    return AugmentedEqualityBoxProblem(P, ρ1, ρ2, h, Jth)
 end
 
 function gradient(P::AugmentedEqualityBoxProblem, x)
     ∇f = gradient(P.P, x)  # Use gradient of sub-problem
-    Jh = jacobian(P, x)
-    h = constraints(P, x)
+    Jh = jacobian(P.P, x)
+    h = constraints(P.P, x)
 
     (; ρ1, ρ2) = P
     return ρ1 * ∇f + ρ2 * Jh' * h
@@ -46,8 +47,8 @@ function gradient!(g, P::AugmentedEqualityBoxProblem, x)
     g .*= ρ1
 
     # + ρ2 * Jh' * h
-    constraints!(P._h, P, x)
-    jacobian_transpose_product!(P._Jth, P, x, P._h)
+    constraints!(P._h, P.P, x)
+    jacobian_transpose_product!(P._Jth, P.P, x, P._h)
     P._Jth .*= ρ2
 
     g .+= P._Jth
@@ -57,5 +58,5 @@ end
 
 function objective(P::AugmentedEqualityBoxProblem, x)
     (; ρ1, ρ2) = P
-    return ρ1 * objective(P.P, x) + (ρ2/2) * norm(constraints(P, x))^2
+    return ρ1 * objective(P.P, x) + (ρ2/2) * norm(constraints(P.P, x))^2
 end

@@ -69,6 +69,7 @@ function constraints!(hu, P::EqualityBoxProblem, x)
     u, s = get_true_vars(P, x), get_slack_vars(P, x)
     cons!(P.nlp, u, hu)
     hu .-= s
+
     return hu
 end
 

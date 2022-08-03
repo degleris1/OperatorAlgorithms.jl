@@ -6,8 +6,9 @@ export solve_ipopt
 export EqualityBoxProblem, augment
 export precondition_cp, precondition_ruiz, precondition_cp_ruiz
 export optimize!, History, distance
-export FixedStep, AdaptiveStep, get_good_step
-export Dommel, HybridGradient, Restarted
+export FixedStep, TrustStep, AdaptiveStep, get_good_step
+export RMSProp, Momentum, RAdam, AMSGrad
+export Dommel, HybridGradient, Restarted, Continuation
 
 # Imports
 # Data Loading
@@ -23,7 +24,7 @@ import JuMP
 MOI = MathOptInterface
 
 # Utilities
-using LinearAlgebra: norm, pinv, I, opnorm, Diagonal
+using LinearAlgebra: norm, pinv, I, opnorm, Diagonal, cond, svdvals
 
 # Modeling
 using NLPModels: get_x0, get_nvar, get_ncon
@@ -38,6 +39,7 @@ using NLPModelsIpopt: ipopt
 include("model/eqprob.jl")
 include("model/augmented.jl")
 include("model/precond.jl")
+include("model/regularize.jl")
 
 include("algorithms/history.jl")
 include("algorithms/step.jl")
@@ -48,6 +50,7 @@ include("algorithms/dommel.jl")
 # include("algorithms/adagrad.jl")
 include("algorithms/cp.jl")
 include("algorithms/restart.jl")
+include("algorithms/continuation.jl")
 # include("algorithms/extragrad.jl")
 
 include("utils.jl")

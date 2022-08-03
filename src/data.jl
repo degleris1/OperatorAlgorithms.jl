@@ -20,7 +20,7 @@ function load_dc(case; make_linear=false)
     return MathOptNLPModel(pm.model)
 end
 
-function load_toy(case::Symbol)
+function load_toy(case::Symbol; n=20, m=3, θ=0.5)
     model = JuMP.Model()
     
     if case == :x_squared
@@ -51,6 +51,21 @@ function load_toy(case::Symbol)
         @variable(model, y >= 0)
         @constraint(model, 1000x + y == 1)
         @objective(model, Min, 3x + y)
+    elseif case == :rand_qp
+        _Q = randn(n, n)
+        Q = _Q'_Q
+        q = randn(n)
+
+        A = rand(m, n)
+
+        @show cond(Q), cond(A)
+        @show extrema(svdvals(Q))
+        @show extrema(svdvals(A))
+
+        @variable(model, x[1:n] >= 0)
+        @objective(model, Min, θ * x' * Q * x + (1-θ) * q' * x)
+        @constraint(model, A * x .== 1)
+
     elseif case == :conflict
         # Constraint conflicts with objective
         error("TODO")

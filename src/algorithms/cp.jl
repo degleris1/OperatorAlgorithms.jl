@@ -58,14 +58,14 @@ function step!(alg::HybridGradient, P::EqualityBoxProblem, x, y)
     # Main update
     
     # (Partially) update x̄
-    @. _x̄ = -x
+    @. _x̄ = -θ * x
 
     # Update primal variable and project
     step!(η, x, dx)
     project_box!(P, x)
    
     # Finish updating x̄
-    @. _x̄ += (1+θ)*x
+    @. _x̄ += (1 + θ) * x
     primal_residual!(_rp̄, P, _x̄, y)
 
     # Update dual variable

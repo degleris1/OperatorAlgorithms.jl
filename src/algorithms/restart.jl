@@ -45,8 +45,10 @@ function step!(alg::Restarted, P::EqualityBoxProblem, x, y)
         @. _y = 0
         
         # Re-initialize the algorithm
-        intialize!(opt, P, x, y)
+        initialize!(opt, P, x, y)
     end
+
+    alg._iter += 1
 
     return step!(opt, P, x, y)
 end

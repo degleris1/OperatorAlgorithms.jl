@@ -4,33 +4,39 @@ using Random
 Random.seed!(0)
 
 opf = load_dc("case30.m"; make_linear=true)
-# opf = load_toy(:linear)
+#opf = load_toy(:rand_qp; n=100, θ=0.0)
 
 # Baseline
 stats = solve_ipopt(opf)
 x_opt = stats.solution
 
 # Parameters
-A = HybridGradient  # algorithm
-τ = 1000  # restart every
+A = HybridGradient
+τ = 1e10  # restart every
 z = 0.9  # step size
-ω = :auto  # primal weight
-ρ = 0.0  # augmented term weight
-num_iter = 400_000  # number of iterations
+ω = 1.0  # primal weight, 1.0 is default (automatic)
+ρ = 10.0  # augmented term weight
+num_iter = 200_000  # number of iterations
+trust = 1.0
 
+# Create and precondition problem
+P = precondition_cp_ruiz(EqualityBoxProblem(opf))
+P = OperatorAlgorithms.RegularizedProblem(P, 1e-8)
 
-# Algorithm
-P = precondition_cp_ruiz(augment(EqualityBoxProblem(opf), ρ))
-
+# Set up step sizes
 η, α = get_good_step(P; z=z, ω=ω)
+η = TrustStep(η, trust/η.η)
+α = TrustStep(α, trust/α.η)
 
-subalg = A(max_iter=num_iter, η=η, α=α)
-alg = Restarted(opt=subalg, restart_every=τ)
-history = History(force=[:variable, :y])
+# Set up algorithm
+alg = A(max_iter=num_iter, η=η, α=α)
+cont = Continuation(opt=alg, _weight=1.0)
+rest = Restarted(opt=alg, restart_every=τ)
+history = History(force=[:variable])
 
 @time x, y, history, alg = optimize!(alg, P, history=history)
 
-@show minimum(history.infeasibility)
+@show log10(minimum(history.infeasibility))
 @show minimum(distance(history, x_opt)) / norm(x_opt)
 plt = plot_diagnostics(history, x_opt; start=10)
 

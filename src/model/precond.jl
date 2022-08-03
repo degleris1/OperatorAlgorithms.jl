@@ -13,35 +13,37 @@ function Base.getproperty(P::PreconditionedProblem, s::Symbol)
 end
 
 function primal_residual(P::PreconditionedProblem, x, y)
-    return P.σ .* constraints(P, x)
+    return P.σ .* primal_residual(P.P, x)  #constraints(P, x)
 end
 
 function primal_residual!(rp, P::PreconditionedProblem, x, y)
     
     # Return -Σ * h(x)
-    constraints!(rp, P, x)
-    @. rp *= -P.σ
+    #constraints!(rp, P.P, x)
+    primal_residual!(rp, P.P, x, y)
+    @. rp *= P.σ
 
     return rp
 end
 
 function dual_residual(P::PreconditionedProblem, x, y)
-    ∇f = gradient(P, x)
-    Jh = jacobian(P, x)
+    #∇f = gradient(P.P, x)
+    #Jh = jacobian(P.P, x)
 
-    return P.τ .* (∇f + Jh' * y)
+    return P.τ .* dual_residual(P, x, y)  #(∇f + Jh' * y)
 end
 
 function dual_residual!(rd, P::PreconditionedProblem, x, y, g)
     # Compute T (∇f + Jh' y)
     
     # First, compute Jh' * y
-    jacobian_transpose_product!(rd, P, x, y)
+    #jacobian_transpose_product!(rd, P.P, x, y)
 
     # Add ∇f
-    rd .+= g
+    #rd .+= g
 
     # Scale by T
+    dual_residual!(rd, P.P, x, y, g)
     @. rd *= P.τ
 
     return rd

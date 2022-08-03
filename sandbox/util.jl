@@ -1,8 +1,8 @@
 using Pkg; Pkg.activate(@__DIR__)
 using LinearAlgebra
 using Plots
-unicodeplots()
-theme(:default; label=nothing)
+gr()
+theme(:default; label=nothing, titlefontsize=10, guidefontsize=10, tickfontsize=8)
 
 using Revise
 using OperatorAlgorithms
@@ -19,16 +19,26 @@ function print_diagnostics(h, x_opt)
     @show distance(h, x_opt)[[1, end]]
 end
 
-function plot_diagnostics(history, x_opt; height=5, width=20, start=10)
+function crd(i, data)
+    return [x[i] for x in data]
+end
+
+function plot_diagnostics(history, x_opt; height=5, width=20, start=1)
     ucp = (
-        extra_kwargs=Dict(:subplot => (; height=height, width=width)), 
-        #ylim=(0, Inf),
+        xticks=10 .^ (0:floor(Int, log10.(length(history.primal_infeasibility)))),
+#        xticks=[0, 0.9*length(history.primal_infeasibility)],
+        xlim=(1, length(history.primal_infeasibility)),
+        xscale=:log10,
     )
     plt = plot(
-        plot(log10.(history.primal_infeasibility[start:end]); ylabel="pinf", ucp...),
-        plot(log10.(history.dual_infeasibility[start:end]); ylabel="dinf", ucp...),
-        plot(distance(history, x_opt)[start:end] / norm(x_opt); ylabel="x - x_opt", ucp...),
-        plot(log10.(history.infeasibility[start:end]); ylabel="inf", ucp...),
+        plot(history.primal_infeasibility[start:end]; 
+             ylabel="Primal Infeasibility", yscale=:log10, ucp...),
+        plot(history.dual_infeasibility[start:end] .+ 1e-15; 
+             ylabel="Dual Infeasibility", yscale=:log10, ucp...),
+        plot(distance(history, x_opt)[start:end] / length(x_opt); 
+             ylabel="rms(x - x*)", ucp...),
+        plot(history.infeasibility[start:end]; 
+             ylabel="Total Infeasibility", yscale=:log10, ucp...),
         layout = (2, 2),
     )
     return plt
