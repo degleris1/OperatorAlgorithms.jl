@@ -39,7 +39,6 @@ function dual_residual!(rd, P::EqualityBoxProblem, x, y, g)
     return rd
 end
 
-
 # TODO Optimize
 function normal_cone_distance(P::EqualityBoxProblem, x, v; tol=1e-5)
     x_min, x_max = get_box(P)
@@ -56,19 +55,45 @@ function objective(P::EqualityBoxProblem, x)
     return obj(P.nlp, u) 
 end
 
+# TODO
+# rethink constraints
+# need to either add a barrier to slack vars
+# or to solve equality vars directly
+
+# basically, we have the following problem
+# min_{x, s} f(x)
+# Ax - b = 0   (true eq vars)
+# Fx - s = 0   (ineq vars)
+# x in X  (box constraints on x)
+# s in S  (box constraints on s)
+
+# box constraints are a tad annoying...
+# maybe i should convert it to a standard form convex problem first
+# then introduce the slack vars (if desired)
+
 function constraints(P::EqualityBoxProblem, x)
     u, s = get_true_vars(P, x), get_slack_vars(P, x)
 
     hu = similar(s)
     cons!(P.nlp, u, hu)
 
-    return hu - s
+    j_eq = get_jfix(P.nlp)
+    j_var = setdiff(1:length(u), j_eq)
+
+    b = get_lcon(P.nlp)[j_eq]
+
+    return [
+        hu[j_eq] - b;
+        hu[j_var] - s
+    ]
 end
 
 function constraints!(hu, P::EqualityBoxProblem, x)
-    u, s = get_true_vars(P, x), get_slack_vars(P, x)
-    cons!(P.nlp, u, hu)
-    hu .-= s
+    #u, s = get_true_vars(P, x), get_slack_vars(P, x)
+    #cons!(P.nlp, u, hu)
+    #hu .-= s
+    
+    hu .= constraints(P, x)
 
     return hu
 end
@@ -93,6 +118,17 @@ function gradient!(∇f, P::EqualityBoxProblem, x)
     ∇f[n+1:end] .= 0
 
     return x
+end
+
+function hessian(P::EqualityBoxProblem, x)
+    u = get_true_vars(P, x)
+    n, m = length(u), num_con(P)
+
+    H0 = hess(P.nlp, u)
+    return [
+        H0 zeros(n, m);
+        zeros(m, n) 0*I
+    ]
 end
 
 function jacobian(P::EqualityBoxProblem, x)
@@ -146,6 +182,10 @@ end
 
 function num_true_var(P::EqualityBoxProblem)
     return get_nvar(P.nlp)
+end
+
+function num_slack_var(P::EqualityBoxProblem)
+    
 end
 
 function num_con(P::EqualityBoxProblem)

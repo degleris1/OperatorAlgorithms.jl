@@ -31,7 +31,7 @@ function plot_diagnostics(history, x_opt; height=5, width=20, start=1, xscale=:l
         xscale=xscale,
     )
     plt = plot(
-        plot(history.primal_infeasibility[start:end]; 
+        plot(history.primal_infeasibility[start:end] .+ 1e-15;
              ylabel="Primal Infeasibility", yscale=:log10, ucp...),
         plot(history.dual_infeasibility[start:end] .+ 1e-15; 
              ylabel="Dual Infeasibility", yscale=:log10, ucp...),
