@@ -16,7 +16,7 @@ using LazyArtifacts
 using Argos: ReducedSpaceEvaluator, OPFModel
 using NLPModelsJuMP: MathOptNLPModel
 using PowerModels: instantiate_model, DCMPPowerModel, build_opf
-using JuMP: @objective, @variable, @constraint
+using JuMP: @objective, @variable, @constraint, @NLobjective
 
 import MathOptInterface
 import PowerModels
@@ -46,8 +46,6 @@ include("algorithms/step.jl")
 include("algorithms/interface.jl")
 
 include("algorithms/dommel.jl")
-# include("algorithms/momentum.jl")
-# include("algorithms/adagrad.jl")
 include("algorithms/cp.jl")
 include("algorithms/restart.jl")
 include("algorithms/continuation.jl")

@@ -3,8 +3,8 @@ include("util.jl")
 using Random
 Random.seed!(0)
 
-opf = load_dc("case30.m"; make_linear=true)
-#opf = load_toy(:rand_qp; n=100, θ=0.0)
+#opf = load_dc("case30.m"; make_linear=true)
+opf = load_toy(:barrier; n=200, m=10, θ=0.0, μ=0.1)
 
 # Baseline
 stats = solve_ipopt(opf)
@@ -13,10 +13,10 @@ x_opt = stats.solution
 # Parameters
 A = HybridGradient
 τ = 1e10  # restart every
-z = 0.9  # step size
+z = 1e-2  # step size
 ω = 1.0  # primal weight, 1.0 is default (automatic)
 ρ = 10.0  # augmented term weight
-num_iter = 200_000  # number of iterations
+num_iter = 1000  # number of iterations
 trust = 1.0
 
 # Create and precondition problem
@@ -38,5 +38,6 @@ history = History(force=[:variable])
 
 @show log10(minimum(history.infeasibility))
 @show minimum(distance(history, x_opt)) / norm(x_opt)
-plt = plot_diagnostics(history, x_opt; start=10)
+plt = plot_diagnostics(history, x_opt)
+
 
