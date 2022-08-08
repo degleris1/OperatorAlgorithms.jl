@@ -123,6 +123,10 @@ function jacobian_transpose_product!(Jtv, P::EqualityBoxProblem, x, v)
     return Jtv
 end
 
+function feasible(P::EqualityBoxProblem, x)
+    return isfinite(objective(P, x))
+end
+
 function project_box!(P::EqualityBoxProblem, x)
     xmin, xmax = get_box(P)
     @. x = clamp(x, xmin, xmax)

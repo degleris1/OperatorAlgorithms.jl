@@ -3,7 +3,7 @@ module OperatorAlgorithms
 # Exports
 export load_dc, write_mps_dc, load_toy
 export solve_ipopt
-export EqualityBoxProblem, augment
+export EqualityBoxProblem, BarrierProblem, augment
 export precondition_cp, precondition_ruiz, precondition_cp_ruiz
 export optimize!, History, distance
 export FixedStep, TrustStep, AdaptiveStep, get_good_step
@@ -37,6 +37,7 @@ using NLPModelsIpopt: ipopt
 
 # Code
 include("model/equality_prob.jl")
+include("model/barrier.jl")
 include("model/augmented.jl")
 include("model/precond.jl")
 include("model/regularize.jl")

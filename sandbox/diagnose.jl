@@ -4,7 +4,7 @@ using Random
 Random.seed!(0)
 
 #opf = load_dc("case30.m"; make_linear=true)
-opf = load_toy(:barrier; n=100, m=10, θ=0.0, μ=1.0)
+opf = load_toy(:rand_qp; n=300, m=10, θ=0.0, μ=1.0)
 
 # Baseline
 stats = solve_ipopt(opf)
@@ -21,6 +21,7 @@ trust = 1.0
 
 # Create and precondition problem
 P = EqualityBoxProblem(opf)
+P = BarrierProblem(P, 1.0)
 
 # Set up step sizes
 η, α = get_good_step(P; z=z, ω=ω)

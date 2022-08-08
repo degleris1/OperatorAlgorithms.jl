@@ -105,7 +105,7 @@ function backtrack!(P, x, y, dx, dy; β=0.8, α=0.01)
     x̂, ŷ = x - t*dx, y - t*dy
     nr̂ = sqrt(norm(dual_residual(P, x̂, ŷ))^2 + norm(primal_residual(P, x̂, ŷ))^2)
 
-    while isnan(objective(P, x̂)) || isinf(objective(P, x̂)) || (nr̂ > (1 - α * t) * nr)
+    while (!feasible(P, x̂)) || (nr̂ > (1 - α * t) * nr)
         t = β * t
         x̂, ŷ = x - t*dx, y - t*dy
         nr̂ = sqrt(norm(dual_residual(P, x̂, ŷ))^2 + norm(primal_residual(P, x̂, ŷ))^2)
