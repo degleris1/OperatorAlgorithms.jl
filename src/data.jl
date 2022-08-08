@@ -62,7 +62,7 @@ function load_toy(case::Symbol; n=20, m=3, θ=0.5, μ=1)
         @show extrema(svdvals(Q))
         @show extrema(svdvals(A))
 
-        @variable(model, x[1:n] >= 0)
+        @variable(model, 1 >= x[1:n] >= 0)
         @objective(model, Min, θ * x' * Q * x + (1-θ) * q' * x)
         @constraint(model, A * x .== 1)
 

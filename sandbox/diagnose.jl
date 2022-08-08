@@ -16,12 +16,11 @@ A = Newton
 z = 1.0  # step size
 ω = 1.0  # primal weight, 1.0 is default (automatic)
 ρ = 10.0  # augmented term weight
-num_iter = 20  # number of iterations
+num_iter = 50  # number of iterations
 trust = 1.0
 
 # Create and precondition problem
 P = EqualityBoxProblem(opf)
-#P = OperatorAlgorithms.RegularizedProblem(P, 1e-8)
 
 # Set up step sizes
 η, α = get_good_step(P; z=z, ω=ω)
@@ -40,6 +39,6 @@ history = History(force=[:variable])
 
 @show log10(minimum(history.infeasibility))
 @show minimum(distance(history, x_opt)) / norm(x_opt)
-plt = plot_diagnostics(history, x_opt)
+plt = plot_diagnostics(history, x_opt; xscale=:identity)
 
 

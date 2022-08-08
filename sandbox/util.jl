@@ -25,7 +25,7 @@ end
 
 function plot_diagnostics(history, x_opt; height=5, width=20, start=1, xscale=:log10)
     ucp = (
-        xticks=10 .^ (0:floor(Int, log10.(length(history.primal_infeasibility)))),
+#        xticks=10 .^ (0:floor(Int, log10.(length(history.primal_infeasibility)))),
 #        xticks=[0, 0.9*length(history.primal_infeasibility)],
         xlim=(1, length(history.primal_infeasibility)),
         xscale=xscale,

@@ -18,12 +18,15 @@ end
 
 function initialize!(alg::Newton, P::EqualityBoxProblem, x, y)
     # Make x strictly feasible
-    A = jacobian(P, x)
-    b = constraints(P, zero(x))
-    x .= x - (A \ (A*x - b))
+    n = num_true_var(P)
+    m = num_con(P)
+    #A = [jacobian(P, x); [zeros(m, n) I(m)]]
+    #b = [constraints(P, zero(x)); zeros(m)]
+    #x .= x - (A \ (A*x - b))
 
-    @assert norm(A*x - b) < 1e-10
-    @show objective(P, x)
+    #@assert norm(A*x - b) < 1e-10
+    #@show minimum(x)
+    #@show objective(P, x)
 
     # Update residual vectors
     alg._g = similar(x)
@@ -46,8 +49,12 @@ function step!(alg::Newton, P::EqualityBoxProblem, x, y)
     dx, dy = _rd, _rp
 
     # Get infeasibility
-    pp = norm(dy) / (1+norm(x))
+    pp = norm(dy)
     dd = norm(dx)  #normal_cone_distance(P, x, dx) #/ (2+norm(y))
+
+    #@show sqrt(pp^2 + dd^2)
+    nr = sqrt(norm(dual_residual(P, x, y))^2 + norm(primal_residual(P, x, y))^2)
+    #@show nr
 
     # Construct Newton matrix
     H = hessian(P, x)
@@ -62,54 +69,49 @@ function step!(alg::Newton, P::EqualityBoxProblem, x, y)
     end
 
     # Use Newton correction
-    z = K \ [dx; dy]
+    # We negate the dual residual since we defined it as -∇_y L(x, y)
+    # If we didn't do this, then the Hessian would have -A in the second row
+    # which would make it no longer symmetric
+    z = K \ [dx; -dy]
     dx .= z[1:num_var(P)]
     dy .= z[num_var(P)+1:end]
 
-    @assert norm(A*dx) < 1e-10
+    # @assert norm(A*dx) < 1e-10
 
-    @show norm(dx), norm(dy)
-    backtrack!(P, x, y, dx, dy)
-    @show norm(dx), norm(dy)
-
-    println("\n")
-
-    # Update
-    step!(η, x, dx)
-    step!(α, y, dy)
-
-    # Project
-    #project_box!(P, x)
+    #@show norm(dx), norm(dy)
+    t = backtrack!(P, x, y, dx, dy)
+    #@show norm(dx), norm(dy)
     
-    @assert norm(A*x) < 1e-10
+    # Update
+    @. x -= t * dx
+    @. y -= t * dy
+
+    #@assert norm(A*x) < 1e-10
 
     # Update
     gradient!(_g, P, x)
     primal_residual!(_rp, P, x, y)
     dual_residual!(_rd, P, x, y, _g)
 
+    #@show sqrt(norm(_rp)^2 + norm(_rd)^2)
+    #println()
     return (primal_infeasibility=pp, dual_infeasibility=dd)
 end
 
 function backtrack!(P, x, y, dx, dy; β=0.8, α=0.01)
-    dd = norm(dual_residual(P, x, y))
+    nr = sqrt(norm(dual_residual(P, x, y))^2 + norm(primal_residual(P, x, y))^2)
     
     t = 1.0
     x̂, ŷ = x - t*dx, y - t*dy
-    r̂ = dual_residual(P, x̂, ŷ)
+    nr̂ = sqrt(norm(dual_residual(P, x̂, ŷ))^2 + norm(primal_residual(P, x̂, ŷ))^2)
 
-    while norm(r̂) > (1 - α * t) * dd
-        @show norm(r̂) - dd
+    while isnan(objective(P, x̂)) || isinf(objective(P, x̂)) || (nr̂ > (1 - α * t) * nr)
         t = β * t
         x̂, ŷ = x - t*dx, y - t*dy
-        r̂ = dual_residual(P, x̂, ŷ)
+        nr̂ = sqrt(norm(dual_residual(P, x̂, ŷ))^2 + norm(primal_residual(P, x̂, ŷ))^2)
     end
 
-    @show "Done", t, norm(r̂) - dd 
-
-    @. dx = t*dx
-    @. dy = t*dy
-    return dx, dy
+    return t
 end
 
 # function clip_step!(Δx, x, max_rel_step_length)

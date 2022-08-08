@@ -28,7 +28,7 @@ using LinearAlgebra: norm, pinv, I, opnorm, Diagonal, cond, svdvals
 
 # Modeling
 using NLPModels: get_x0, get_nvar, get_ncon
-using NLPModels: get_lvar, get_uvar, get_lcon, get_ucon
+using NLPModels: get_lvar, get_uvar, get_lcon, get_ucon, get_jfix
 using NLPModels: obj, grad!, hess
 using NLPModels: cons!, jac, jtprod!
 
@@ -36,7 +36,7 @@ using NLPModels: cons!, jac, jtprod!
 using NLPModelsIpopt: ipopt
 
 # Code
-include("model/eqprob.jl")
+include("model/equality_prob.jl")
 include("model/augmented.jl")
 include("model/precond.jl")
 include("model/regularize.jl")
