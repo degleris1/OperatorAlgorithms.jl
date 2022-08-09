@@ -52,9 +52,8 @@ function step!(alg::Newton, P::EqualityBoxProblem, x, y)
     pp = norm(dy)
     dd = norm(dx)  #normal_cone_distance(P, x, dx) #/ (2+norm(y))
 
-    #@show sqrt(pp^2 + dd^2)
-    nr = sqrt(norm(dual_residual(P, x, y))^2 + norm(primal_residual(P, x, y))^2)
-    #@show nr
+    nr = sqrt(pp^2 + dd^2)
+    # @show nr
 
     # Construct Newton matrix
     H = hessian(P, x)
@@ -77,10 +76,7 @@ function step!(alg::Newton, P::EqualityBoxProblem, x, y)
     dy .= z[num_var(P)+1:end]
 
     # @assert norm(A*dx) < 1e-10
-
-    #@show norm(dx), norm(dy)
     t = backtrack!(P, x, y, dx, dy)
-    #@show norm(dx), norm(dy)
     
     # Update
     @. x -= t * dx
@@ -107,9 +103,16 @@ function backtrack!(P, x, y, dx, dy; β=0.8, α=0.01)
 
     while (!feasible(P, x̂)) || (nr̂ > (1 - α * t) * nr)
         t = β * t
+        
+        if log10(t) < -20
+            t = 0
+        end
+        
         x̂, ŷ = x - t*dx, y - t*dy
         nr̂ = sqrt(norm(dual_residual(P, x̂, ŷ))^2 + norm(primal_residual(P, x̂, ŷ))^2)
     end
+
+    # @show t, nr - nr̂
 
     return t
 end

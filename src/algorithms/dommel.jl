@@ -44,15 +44,19 @@ function step!(alg::Dommel, P::EqualityBoxProblem, x, y)
     dx, dy = _rd, _rp
 
     # Get infeasibility
-    pp = norm(dy) / (1+norm(x))
-    dd = normal_cone_distance(P, x, dx) / (1+norm(y))
+    pp = norm(dy)
+    dd = norm(dx) 
+
+    t = backtrack!(P, x, y, dx, dy)
+    @. x -= t * dx
+    @. y -= t * dy
 
     # Update
-    step!(η, x, dx)
-    step!(α, y, dy)
+    #step!(η, x, dx)
+    #step!(α, y, dy)
 
     # Project
-    project_box!(P, x)
+    # project_box!(P, x)
 
     # Update
     gradient!(_g, P, x)
@@ -61,11 +65,4 @@ function step!(alg::Dommel, P::EqualityBoxProblem, x, y)
 
     return (primal_infeasibility=pp, dual_infeasibility=dd)
 end
-
-# function clip_step!(Δx, x, max_rel_step_length)
-#     if norm(Δx) > max_rel_step_length*(1+norm(x))
-#         Δx *= max_rel_step_length * (norm(x) / norm(Δx))
-#     end
-#     return Δx
-# end
 

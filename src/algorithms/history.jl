@@ -17,7 +17,7 @@ end
 
 function Base.getproperty(h::History, s::Symbol)
     if s == :infeasibility
-        return h.primal_infeasibility + h.dual_infeasibility
+        return sqrt.(h.primal_infeasibility .^ 2 + h.dual_infeasibility .^ 2)
     else
         return getfield(h, s)
     end

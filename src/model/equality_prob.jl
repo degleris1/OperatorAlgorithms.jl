@@ -2,9 +2,10 @@ abstract type EqualityBoxProblem end
 
 struct StandardEqualityBoxProblem <: EqualityBoxProblem
     nlp
+    ω
 end
 
-EqualityBoxProblem(nlp) = StandardEqualityBoxProblem(nlp)
+EqualityBoxProblem(nlp, ω=1) = StandardEqualityBoxProblem(nlp, ω)
 
 function lagrangian(P::EqualityBoxProblem, x, y)
     return objective(P, x) + y' * constraints(P, x)
@@ -92,7 +93,7 @@ function constraints(P::EqualityBoxProblem, x)
     hu[1:m] = hu_nlp[_get_ineq_indices(P.nlp)] - s
     hu[m+1:m+k] = hu_nlp[_get_eq_indices(P.nlp)] - get_rhs(P)
 
-    return hu
+    return P.ω * hu
 end
 
 # TODO Optimize
@@ -110,7 +111,7 @@ function jacobian(P::EqualityBoxProblem, x)
     J_i = J_u[_get_ineq_indices(P.nlp), :]
     J_e = J_u[_get_eq_indices(P.nlp), :]
 
-    return [
+    return P.ω * [
         J_i -I(m)
         J_e zeros(k, m)
     ]

@@ -8,7 +8,7 @@ export precondition_cp, precondition_ruiz, precondition_cp_ruiz
 export optimize!, History, distance
 export FixedStep, TrustStep, AdaptiveStep, get_good_step
 export RMSProp, Momentum, RAdam, AMSGrad
-export Dommel, HybridGradient, Restarted, Continuation, Newton
+export Dommel, HybridGradient, Restarted, Continuation, Newton, TruncNewton
 
 # Imports
 # Data Loading
@@ -24,7 +24,7 @@ import JuMP
 MOI = MathOptInterface
 
 # Utilities
-using LinearAlgebra: norm, pinv, I, opnorm, Diagonal, cond, svdvals
+using LinearAlgebra: norm, pinv, I, opnorm, Diagonal, cond, svdvals, mul!, diag
 
 # Modeling
 using NLPModels: get_x0, get_nvar, get_ncon
@@ -49,6 +49,7 @@ include("algorithms/interface.jl")
 include("algorithms/dommel.jl")
 include("algorithms/cp.jl")
 include("algorithms/newton.jl")
+include("algorithms/trunc_newton.jl")
 include("algorithms/restart.jl")
 include("algorithms/continuation.jl")
 # include("algorithms/extragrad.jl")

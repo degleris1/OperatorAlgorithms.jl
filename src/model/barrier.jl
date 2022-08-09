@@ -4,10 +4,12 @@ struct BarrierProblem <: EqualityBoxProblem
 end
 
 function Base.getproperty(P::BarrierProblem, s::Symbol)
-    if s === :nlp
-        return P.P.nlp
+    if s === :P
+        return getfield(P, :P)
+    elseif s === :t
+        return getfield(P, :t)
     else
-        return getfield(P, s)
+        return getfield(P.P, s)
     end
 end
 
