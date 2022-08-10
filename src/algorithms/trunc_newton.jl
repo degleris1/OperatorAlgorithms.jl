@@ -29,7 +29,7 @@ function initialize!(alg::TruncNewton, P::EqualityBoxProblem, x, y)
     alg._rp = similar(y)
     primal_residual!(alg._rp, P, x, y)
 
-    alg._z0 = zero([x; y])
+    alg._z0 = zero(y)  #zero([x; y])
 
     return x, y
 end
@@ -46,30 +46,55 @@ function step!(alg::TruncNewton, P::EqualityBoxProblem, x, y)
     dd = norm(dx)  #normal_cone_distance(P, x, dx) #/ (2+norm(y))
 
     nr = sqrt(pp^2 + dd^2)
+    @show nr
 
     # Construct Newton matrix
-    H = hessian(P, x)
-    A = jacobian(P, x)
-    K = [
-        H A';
-        A 0*I
-    ]
+    standard = false
+    if standard
+        H = hessian(P, x) + I
+        A = jacobian(P, x)
+        K = [
+            H A';
+            A 0*I
+        ]
+    
+        M = Diagonal([1 ./ (diag(H) .+ 1); ones(length(y))])
+        z = solve_cg(K, [dx; -dy], _z0, k, M)
+        _z0 .= z  # Save result for next time
+        
+        @show norm(K * z - [dx; -dy]) / norm([dx; -dy])
+        
+        dx .= z[1:num_var(P)]
+        dy .= z[num_var(P)+1:end]
+    else
+        H = Diagonal(hessian(P, x) + I)
+        A = jacobian(P, x)
 
-    M = Diagonal([1 ./ (diag(H) .+ 1); ones(length(y))])
+        Q, R = qr(A')
+        Q = Q[:, 1:length(y)]
 
-    if cond(Matrix(M*K)) > 1e8
-        @show log10(cond(Matrix(M*K)))
+        b1 = copy(dx)
+        b2 = copy(-dy)
+
+        # Substitute
+        b̃ = A*(H \ b1) - b2
+
+        # Solve subsystem
+        b̂ = R' \ b̃
+        K = Q' * (H \ Q)
+        z = solve_cg(K, b̂, alg._z0, k, I)
+        alg._z0 = z
+
+        dy .= R \ z  # y update
+
+        # Backsolve
+        dx .= H \ (b1 - A' * dy)
+
+        @show norm(H * dx + A' * dy - b1) / norm(b1)
+        #@show norm(A * dx - b2) / norm(b2)
     end
 
-    # Use Newton correction
-    # We negate the dual residual since we defined it as -∇_y L(x, y)
-    # If we didn't do this, then the Hessian would have -A in the second row
-    # which would make it no longer symmetric
-    z = solve_cg(K, [dx; -dy], _z0, k, M)
-    _z0 .= z  # Save result for next time
-    
-    dx .= z[1:num_var(P)]
-    dy .= z[num_var(P)+1:end]
+    # println()
 
     t = backtrack!(P, x, y, dx, dy)
     
@@ -106,6 +131,8 @@ function solve_cg(K, b, z0, num_iter, M)
         
         @. p = d + (ρ[iter+1] / ρ[iter]) * p
     end
+
+    #@show norm(K*z - b) / norm(b)
 
     return z
 end

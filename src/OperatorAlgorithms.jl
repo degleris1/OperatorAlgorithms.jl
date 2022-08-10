@@ -24,7 +24,7 @@ import JuMP
 MOI = MathOptInterface
 
 # Utilities
-using LinearAlgebra: norm, pinv, I, opnorm, Diagonal, cond, svdvals, mul!, diag
+using LinearAlgebra: norm, pinv, I, opnorm, Diagonal, cond, svdvals, mul!, diag, qr
 
 # Modeling
 using NLPModels: get_x0, get_nvar, get_ncon

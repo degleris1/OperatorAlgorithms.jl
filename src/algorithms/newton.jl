@@ -56,14 +56,14 @@ function step!(alg::Newton, P::EqualityBoxProblem, x, y)
     # @show nr
 
     # Construct Newton matrix
-    H = hessian(P, x)
+    H = hessian(P, x) + I
     A = jacobian(P, x)
     K = [
         H A';
         A 0*I
     ]
     
-    if cond(Matrix(K)) > 1e8
+    if cond(Matrix(K)) > 1e10
         @warn cond(Matrix(K))
     end
 
@@ -99,7 +99,11 @@ function backtrack!(P, x, y, dx, dy; β=0.8, α=0.01)
     
     t = 1.0
     x̂, ŷ = x - t*dx, y - t*dy
-    nr̂ = sqrt(norm(dual_residual(P, x̂, ŷ))^2 + norm(primal_residual(P, x̂, ŷ))^2)
+
+    g = gradient(P, x̂)
+    dr = dual_residual(P, x̂, ŷ)
+    pr = primal_residual(P, x̂, ŷ)
+    nr̂ = sqrt(norm(dr)^2 + norm(pr)^2)
 
     while (!feasible(P, x̂)) || (nr̂ > (1 - α * t) * nr)
         t = β * t
@@ -108,11 +112,14 @@ function backtrack!(P, x, y, dx, dy; β=0.8, α=0.01)
             t = 0
         end
         
-        x̂, ŷ = x - t*dx, y - t*dy
-        nr̂ = sqrt(norm(dual_residual(P, x̂, ŷ))^2 + norm(primal_residual(P, x̂, ŷ))^2)
-    end
+        @. x̂ = x - t*dx
+        @. ŷ = y - t*dy
 
-    # @show t, nr - nr̂
+        gradient!(g, P, x̂)
+        dual_residual!(dr, P, x̂, ŷ, g)
+        primal_residual!(pr, P, x̂, ŷ)
+        nr̂ = sqrt(norm(dr)^2 + norm(pr)^2)
+    end
 
     return t
 end
