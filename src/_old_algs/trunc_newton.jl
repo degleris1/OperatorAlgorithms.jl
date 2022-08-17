@@ -91,7 +91,6 @@ function step!(alg::TruncNewton, P::EqualityBoxProblem, x, y)
         dx .= H \ (b1 - A' * dy)
 
         @show norm(H * dx + A' * dy - b1) / norm(b1)
-        #@show norm(A * dx - b2) / norm(b2)
     end
 
     # println()
@@ -131,8 +130,6 @@ function solve_cg(K, b, z0, num_iter, M)
         
         @. p = d + (ρ[iter+1] / ρ[iter]) * p
     end
-
-    #@show norm(K*z - b) / norm(b)
 
     return z
 end

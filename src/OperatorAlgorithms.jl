@@ -14,7 +14,7 @@ export descent!
 export History, distance
 export Backtracking
 export FixedStop
-export GradientStep
+export GradientStep, NewtonStep
 
 #export precondition_cp, precondition_ruiz, precondition_cp_ruiz
 #export optimize!, History, distance
@@ -33,6 +33,7 @@ using JuMP: @objective, @variable, @constraint, @NLobjective
 import MathOptInterface
 import PowerModels
 import JuMP
+import NLPModels
 MOI = MathOptInterface
 
 # Utilities
@@ -43,7 +44,7 @@ import LinearAlgebra: norm
 # Modeling
 using NLPModels: get_x0, get_nvar, get_ncon
 using NLPModels: get_lvar, get_uvar, get_lcon, get_ucon, get_jfix
-using NLPModels: obj, grad!, hess
+using NLPModels: obj, grad!, hess, hess_coord!
 using NLPModels: cons!, jac, jtprod!
 
 # Solvers
@@ -66,6 +67,7 @@ include("alg/optimizer.jl")
 
 ## Step rules
 include("step/gradient.jl")
+include("step/newton.jl")
 
 ## Utilities
 include("utils.jl")

@@ -31,20 +31,6 @@ function objective(P::BarrierProblem, z::PrimalDual)
     return f
 end
 
-function gradient(P::BarrierProblem, z::PrimalDual)
-    x = z.primal 
-
-    ∇f = gradient(P.P, x)
-    xmin, xmax = get_box(P)
-
-    # 1 / Inf = 0
-    # So we can just evaluate the vectorized expression
-    @. ∇f += -P.t * (1 / (x - xmin))
-    @. ∇f += P.t * (1 / (xmax - x))
-
-    return ∇f
-end
-
 function gradient!(∇f, P::BarrierProblem, z::PrimalDual)
     x = z.primal
 
@@ -60,18 +46,14 @@ function gradient!(∇f, P::BarrierProblem, z::PrimalDual)
     return ∇f
 end
 
-function hessian(P::BarrierProblem, z::PrimalDual)
-    H = hessian(P.P, x)
+function hessian!(H::Diagonal, P::BarrierProblem, z::PrimalDual)
+    hessian!(H, P.P, z)
+
+    x = z.primal
     xmin, xmax = get_box(P)
 
-    for i in 1:length(xmin)
-        H[i, i] += P.t * (1 / (x[i] - xmin[i]))^2
-        H[i, i] += P.t * (1 / (xmax[i] - x[i]))^2
-    end
+    @. H.diag += P.t * (1 / (x - xmin))^2
+    @. H.diag += P.t * (1 / (xmax - x))^2
 
     return H
-end
-
-function hessian!(H, P::BarrierProblem, z::PrimalDual)
-    error("Not yet supported.")
 end

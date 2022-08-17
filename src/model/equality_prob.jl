@@ -1,15 +1,15 @@
 abstract type EqualityBoxProblem end
 
-struct StandardEqualityBoxProblem <: EqualityBoxProblem
+struct StandardEqualityBoxProblem{T <: Real} <: EqualityBoxProblem
     nlp
     ω
     _eq_indices
     _ineq_indices
     _A
-    _b
-    _xmin
-    _xmax
-    _g
+    _b::Vector{T}
+    _xmin::Vector{T}
+    _xmax::Vector{T}
+    _g::Vector{T}
 end
 
 function EqualityBoxProblem(nlp, ω=1.0)
@@ -24,17 +24,30 @@ function EqualityBoxProblem(nlp, ω=1.0)
 
     _g = similar(xmin)
 
+    # Require diagonal Hessian
+    r, c = NLPModels.hess_structure(nlp)
+    @assert all(r .== c)
+
     return StandardEqualityBoxProblem(nlp, ω, _eq_indices, _ineq_indices, _A, _b, xmin, xmax, _g)
 end
 
 function initialize(P::EqualityBoxProblem)
-    xmin, xmax = get_box(P)
+    xmin, xmax = deepcopy(get_box(P))
 
-    xmin = max.(xmin, minimum(xmin[isfinite.(xmin)]))
-    xmax = min.(xmax, maximum(xmax[isfinite.(xmax)]))
+
+    for i in eachindex(xmin)
+        if xmin[i] == -Inf && xmax[i] == Inf
+            xmin[i] = -1
+            xmax[i] = 1
+        elseif xmin[i] == -Inf
+            xmin[i] = xmax[i] - 1
+        elseif xmax[i] == Inf
+            xmax[i] = xmin[i] + 1
+        end
+    end
 
     x, y = zeros(num_var(P)), zeros(num_con(P))
-    x .= rand(num_var(P)) .* (xmax - xmin) .+ xmin
+    x .= (1/2) .* (xmax - xmin) .+ xmin
     
     @assert !any(isnan.(x))
 
@@ -110,19 +123,23 @@ function gradient!(∇f, P::EqualityBoxProblem, z::PrimalDual)
 end
 
 function hessian(P::EqualityBoxProblem, z::PrimalDual)
-    x = z.primal
-    u = get_true_vars(P, x)
-    n, m = num_true_var(P), num_slack_var(P)
-
-    H0 = hess(P.nlp, u)
-    return [
-        H0 spzeros(n, m);
-        spzeros(m, n) 0*I
-    ]
+    H = Diagonal(zero(z.primal))
+    return hessian!(H, P, z)
 end
 
-function hessian!(H, P::EqualityBoxProblem, z::PrimalDual)
-    error("Not yet supported.")
+function hessian!(H::Diagonal, P::EqualityBoxProblem, z::PrimalDual)
+    n, m = num_true_var(P), num_slack_var(P)
+    x = z.primal
+
+    # Update first block
+    hess_coord!(P.nlp, view(x, 1:n), view(H.diag, 1:n))
+
+    # Update second block
+    H.diag[n+1:n+m] .= 0
+
+    @assert minimum(H.diag) >= 0 "Min is $(minimum(H))"
+
+    return H
 end
 
 function constraints(P::EqualityBoxProblem, z::PrimalDual)
@@ -132,6 +149,7 @@ end
 
 function constraints!(hu, P::EqualityBoxProblem, z::PrimalDual)
     mul!(hu, P._A, z.primal)
+    @. hu .-= P._b
     return hu
 end
 
@@ -148,13 +166,12 @@ function feasible(P::EqualityBoxProblem, z::PrimalDual)
     x = z.primal
     xmin, xmax = get_box(P)
 
-    for i in 1:length(x)
-        if x[i] < xmin[i] || x[i] > xmax[i]
-            return false
-        end
+    in_box = true
+    @inbounds for i in 1:length(x)
+        in_box = in_box && (xmin[i] <= x[i] <= xmax[i])
     end
 
-    return true
+    return in_box
 end
 
 function project_box!(P::EqualityBoxProblem, z::PrimalDual)
@@ -240,7 +257,8 @@ function _get_ineq_indices(nlp)
 end
 
 function _get_b(nlp)
-    return get_lcon(nlp)[_get_eq_indices(nlp)]
+    m = length(_get_ineq_indices(nlp))
+    return [get_lcon(nlp)[_get_eq_indices(nlp)]; zeros(m)]
 end
 
 

@@ -1,7 +1,7 @@
 
-mutable struct PrimalDual
-    primal
-    dual
+mutable struct PrimalDual{T <: Real}
+    primal::Vector{T}
+    dual::Vector{T}
 end
 
 Base.zero(z::PrimalDual) = PrimalDual(zero(z.primal), zero(z.dual))

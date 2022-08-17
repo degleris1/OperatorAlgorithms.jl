@@ -33,11 +33,18 @@ function adjust_step!(dx, R::Backtracking, P::EqualityBoxProblem, x)
     x̂ = get!(() -> zero(x), xhat, x)
     r̂ = get!(() -> zero(x), rhat, x)
 
-    nr = norm(residual!(r̂, P, x))  # Initial residual
+    residual!(r̂, P, x)
+    nr = norm(r̂)  # Initial residual
     t = 1.0
 
     update!(x̂, x, t, dx)
-    nr_hat = feasible(P, x̂) ? norm(residual!(r̂, P, x̂)) : Inf
+
+    if feasible(P, x̂)
+        residual!(r̂, P, x̂)
+        nr_hat = norm(r̂)
+    else
+        nr_hat = Inf
+    end
 
     while nr_hat > (1 - α * t) * nr
         t = β * t
@@ -48,7 +55,14 @@ function adjust_step!(dx, R::Backtracking, P::EqualityBoxProblem, x)
         end
 
         update!(x̂, x, t, dx)
-        nr_hat = feasible(P, x̂) ? norm(residual!(r̂, P, x̂)) : Inf
+
+        # Update residual
+        if feasible(P, x̂)
+            residual!(r̂, P, x̂)
+            nr_hat = norm(r̂)
+        else
+            nr_hat = Inf
+        end
     end
 
     return t

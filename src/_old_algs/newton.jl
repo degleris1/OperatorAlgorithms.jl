@@ -53,7 +53,6 @@ function step!(alg::Newton, P::EqualityBoxProblem, x, y)
     dd = norm(dx)  #normal_cone_distance(P, x, dx) #/ (2+norm(y))
 
     nr = sqrt(pp^2 + dd^2)
-    # @show nr
 
     # Construct Newton matrix
     H = hessian(P, x) + I
@@ -75,7 +74,6 @@ function step!(alg::Newton, P::EqualityBoxProblem, x, y)
     dx .= z[1:num_var(P)]
     dy .= z[num_var(P)+1:end]
 
-    # @assert norm(A*dx) < 1e-10
     t = backtrack!(P, x, y, dx, dy)
     
     # Update
