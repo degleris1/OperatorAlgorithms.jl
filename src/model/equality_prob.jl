@@ -3,62 +3,100 @@ abstract type EqualityBoxProblem end
 struct StandardEqualityBoxProblem <: EqualityBoxProblem
     nlp
     ω
+    _eq_indices
+    _ineq_indices
+    _A
+    _b
+    _xmin
+    _xmax
+    _g
 end
 
-EqualityBoxProblem(nlp, ω=1) = StandardEqualityBoxProblem(nlp, ω)
+function EqualityBoxProblem(nlp, ω=1.0)
+    _eq_indices = _get_eq_indices(nlp)
+    _ineq_indices = _get_ineq_indices(nlp)
 
-function lagrangian(P::EqualityBoxProblem, x, y)
-    return objective(P, x) + y' * constraints(P, x)
+    _A = _jacobian(nlp, ω)
+    _b = _get_b(nlp)
+
+    xmin = [get_lvar(nlp); get_lcon(nlp)[_ineq_indices]]
+    xmax = [get_uvar(nlp); get_ucon(nlp)[_ineq_indices]]
+
+    _g = similar(xmin)
+
+    return StandardEqualityBoxProblem(nlp, ω, _eq_indices, _ineq_indices, _A, _b, xmin, xmax, _g)
 end
 
-function primal_residual(P::EqualityBoxProblem, x, y)
-    return -constraints(P, x)
+function initialize(P::EqualityBoxProblem)
+    xmin, xmax = get_box(P)
+
+    xmin = max.(xmin, minimum(xmin[isfinite.(xmin)]))
+    xmax = min.(xmax, maximum(xmax[isfinite.(xmax)]))
+
+    x, y = zeros(num_var(P)), zeros(num_con(P))
+    x .= rand(num_var(P)) .* (xmax - xmin) .+ xmin
+    
+    @assert !any(isnan.(x))
+
+    return PrimalDual(x, y)
 end
 
-function primal_residual!(rp, P::EqualityBoxProblem, x, y)
-    constraints!(rp, P, x)
+# ====
+# RESIDUALS
+# ====
+
+function residual(P::EqualityBoxProblem, z::PrimalDual)
+    dz = similar(z)
+    return residual!(dz, P, z)
+end
+
+function residual!(dz, P::EqualityBoxProblem, z::PrimalDual)
+    primal_residual!(dz.dual, P, z)
+    dual_residual!(dz.primal, P, z)
+    return dz
+end
+
+function primal_residual(P::EqualityBoxProblem, z::PrimalDual)
+    return -constraints(P, z)
+end
+
+function primal_residual!(rp, P::EqualityBoxProblem, z::PrimalDual)
+    constraints!(rp, P, z)
     @. rp = -rp
+    
     return rp
 end
 
-function dual_residual(P::EqualityBoxProblem, x, y)
-    ∇f = gradient(P, x)
-    Jh = jacobian(P, x)
-    return ∇f + Jh' * y
+function dual_residual(P::EqualityBoxProblem, z::PrimalDual)
+    rd = similar(z.primal)
+    return dual_residual!(rd, P, z)
 end
 
-function dual_residual!(rd, P::EqualityBoxProblem, x, y, g)
-    jacobian_transpose_product!(rd, P, x, y)
-    rd .+= g
+function dual_residual!(rd, P::EqualityBoxProblem, z::PrimalDual)
+    ∇f = gradient!(P._g, P, z)
+
+    # ∇f + A' y
+    jacobian_transpose_product!(rd, P, z, z.dual)
+    @. rd += ∇f
     return rd
 end
 
-# TODO Optimize
-function normal_cone_distance(P::EqualityBoxProblem, x, v; tol=1e-5)
-    x_min, x_max = get_box(P)
- 
-    # Find binding constraints
-    not_binding = @. (abs(x_min - x) > tol) & (abs(x_max - x) > tol)
+# ====
+# OBJECTIVE, GRADIENT, CONSTRAINTS
+# ====
 
-    # Compute error in the non-bound components
-    return norm(v[not_binding])
+function objective(P::EqualityBoxProblem, z::PrimalDual)
+    u = get_true_vars(P, z.primal)
+    return obj(P.nlp, u)
 end
 
-function objective(P::EqualityBoxProblem, x)
-    u = get_true_vars(P, x)
-    return obj(P.nlp, u) 
+function gradient(P::EqualityBoxProblem, z::PrimalDual)
+    ∇f = similar(z.primal)
+    return gradient!(∇f, P, z)
 end
 
-function gradient(P::EqualityBoxProblem, x)
-    u = get_true_vars(P, x)
-    
-    ∇f = similar(u)
-    grad!(P.nlp, u, ∇f)
-
-    return [∇f; zeros(num_slack_var(P))]
-end
-
-function gradient!(∇f, P::EqualityBoxProblem, x)
+function gradient!(∇f, P::EqualityBoxProblem, z::PrimalDual)
+    x = z.primal
     n = num_true_var(P)
 
     # Update main variables
@@ -71,85 +109,76 @@ function gradient!(∇f, P::EqualityBoxProblem, x)
     return ∇f
 end
 
-function hessian(P::EqualityBoxProblem, x)
+function hessian(P::EqualityBoxProblem, z::PrimalDual)
+    x = z.primal
     u = get_true_vars(P, x)
     n, m = num_true_var(P), num_slack_var(P)
 
     H0 = hess(P.nlp, u)
     return [
-        H0 zeros(n, m);
-        zeros(m, n) 0*I
+        H0 spzeros(n, m);
+        spzeros(m, n) 0*I
     ]
 end
 
-function constraints(P::EqualityBoxProblem, x)
-    u, s = get_true_vars(P, x), get_slack_vars(P, x)
-    m, k = num_slack_var(P), num_eq_con(P)
-    
-    hu_nlp = zeros(num_con(P))
-    cons!(P.nlp, u, hu_nlp)
-
-    hu = similar(hu_nlp)
-    hu[1:m] = hu_nlp[_get_ineq_indices(P.nlp)] - s
-    hu[m+1:m+k] = hu_nlp[_get_eq_indices(P.nlp)] - get_rhs(P)
-
-    return P.ω * hu
+function hessian!(H, P::EqualityBoxProblem, z::PrimalDual)
+    error("Not yet supported.")
 end
 
-# TODO Optimize
-function constraints!(hu, P::EqualityBoxProblem, x)
-    hu .= constraints(P, x)
+function constraints(P::EqualityBoxProblem, z::PrimalDual)
+    hu = similar(z.dual)
+    return constraints!(hu, P, z)
+end
+
+function constraints!(hu, P::EqualityBoxProblem, z::PrimalDual)
+    mul!(hu, P._A, z.primal)
     return hu
 end
 
-function jacobian(P::EqualityBoxProblem, x)
-    u = get_true_vars(P, x)
-    m, k = num_slack_var(P), num_eq_con(P)
-    
-    J_u = jac(P.nlp, u)
-
-    J_i = J_u[_get_ineq_indices(P.nlp), :]
-    J_e = J_u[_get_eq_indices(P.nlp), :]
-
-    return P.ω * [
-        J_i -I(m)
-        J_e zeros(k, m)
-    ]
+function jacobian(P::EqualityBoxProblem, z::PrimalDual)
+    return P._A
 end
 
-# TODO Optimize
-function jacobian_transpose_product!(Jtv, P::EqualityBoxProblem, x, v)
-    J = jacobian(P, x)
-    Jtv .= J' * v
+function jacobian_transpose_product!(Jtv, P::EqualityBoxProblem, z::PrimalDual, v)
+    mul!(Jtv, transpose(P._A), v)
     return Jtv
 end
 
-function feasible(P::EqualityBoxProblem, x)
-    return isfinite(objective(P, x))
+function feasible(P::EqualityBoxProblem, z::PrimalDual)
+    x = z.primal
+    xmin, xmax = get_box(P)
+
+    for i in 1:length(x)
+        if x[i] < xmin[i] || x[i] > xmax[i]
+            return false
+        end
+    end
+
+    return true
 end
 
-function project_box!(P::EqualityBoxProblem, x)
+function project_box!(P::EqualityBoxProblem, z::PrimalDual)
+    x = z.primal
+
     xmin, xmax = get_box(P)
     @. x = clamp(x, xmin, xmax)
     return x
 end
 
-# TODO Optimize
+# ====
+# PROBLEM DATA
+# ====
+
 function get_box(P::EqualityBoxProblem)
-    j_ineq = _get_ineq_indices(P.nlp)
-
-    x_min = [get_lvar(P.nlp); get_lcon(P.nlp)[j_ineq]]
-    x_max = [get_uvar(P.nlp); get_ucon(P.nlp)[j_ineq]]
-
-    return x_min, x_max
+    return P._xmin, P._xmax
 end
 
 function get_rhs(P::EqualityBoxProblem)
-    return _get_b(P.nlp)
+    return P._b
 end
 
 # ====
-# Indexing
+# INDEXING
 # ====
 
 function get_true_vars(P::EqualityBoxProblem, x)
@@ -169,7 +198,7 @@ function num_true_var(P::EqualityBoxProblem)
 end
 
 function num_slack_var(P::EqualityBoxProblem)
-    return length(_get_ineq_indices(P.nlp))  # m
+    return length(P._ineq_indices)  # m
 end
 
 function num_con(P::EqualityBoxProblem)
@@ -177,14 +206,31 @@ function num_con(P::EqualityBoxProblem)
 end
 
 function num_eq_con(P::EqualityBoxProblem)
-    return length(_get_eq_indices(P.nlp))  # k
+    return length(P._eq_indices)  # k
 end
 
 # ====
-# NLPModels Helpers
+# NLPMODELS HELPERS
 # ====
 
-# TODO Optimize
+function _jacobian(nlp, ω)
+    ineq = _get_ineq_indices(nlp)
+    eq = _get_eq_indices(nlp)
+
+    n, m, k = get_nvar(nlp), length(ineq), length(eq)
+
+    u = get_x0(nlp)
+
+    J_u = jac(nlp, u)
+    J_i = J_u[ineq, :]
+    J_e = J_u[eq, :]
+
+    return ω * [
+        J_i -I(m)
+        J_e spzeros(k, m)
+    ]
+end
+
 function _get_eq_indices(nlp)
     return get_jfix(nlp)
 end

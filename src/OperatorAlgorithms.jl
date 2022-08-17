@@ -1,14 +1,26 @@
 module OperatorAlgorithms
 
 # Exports
+## Helpers
 export load_dc, write_mps_dc, load_toy
 export solve_ipopt
-export EqualityBoxProblem, BarrierProblem, augment
-export precondition_cp, precondition_ruiz, precondition_cp_ruiz
-export optimize!, History, distance
-export FixedStep, TrustStep, AdaptiveStep, get_good_step
-export RMSProp, Momentum, RAdam, AMSGrad
-export Dommel, HybridGradient, Restarted, Continuation, Newton, TruncNewton
+
+## Model
+export PrimalDual
+export EqualityBoxProblem, BarrierProblem
+
+## Algorithm
+export descent!
+export History, distance
+export Backtracking
+export FixedStop
+export GradientStep
+
+#export precondition_cp, precondition_ruiz, precondition_cp_ruiz
+#export optimize!, History, distance
+#export FixedStep, TrustStep, AdaptiveStep, get_good_step
+#export RMSProp, Momentum, RAdam, AMSGrad
+#export Dommel, HybridGradient, Restarted, Continuation, Newton, TruncNewton
 
 # Imports
 # Data Loading
@@ -24,7 +36,9 @@ import JuMP
 MOI = MathOptInterface
 
 # Utilities
-using LinearAlgebra: norm, pinv, I, opnorm, Diagonal, cond, svdvals, mul!, diag, qr
+using SparseArrays: spzeros
+using LinearAlgebra: pinv, I, opnorm, Diagonal, cond, svdvals, mul!, diag, qr
+import LinearAlgebra: norm
 
 # Modeling
 using NLPModels: get_x0, get_nvar, get_ncon
@@ -36,24 +50,24 @@ using NLPModels: cons!, jac, jtprod!
 using NLPModelsIpopt: ipopt
 
 # Code
+## Primal dual object
+include("primal_dual_vector.jl")
+
+## Optimization problems
 include("model/equality_prob.jl")
 include("model/barrier.jl")
-include("model/augmented.jl")
-include("model/precond.jl")
-include("model/regularize.jl")
 
-include("algorithms/history.jl")
-include("algorithms/step.jl")
-include("algorithms/interface.jl")
+## Algorithm core code
+include("alg/history.jl")
+include("alg/stepsize.jl")
+include("alg/converged.jl")
+include("step/interface.jl")
+include("alg/optimizer.jl")
 
-include("algorithms/dommel.jl")
-include("algorithms/cp.jl")
-include("algorithms/newton.jl")
-include("algorithms/trunc_newton.jl")
-include("algorithms/restart.jl")
-include("algorithms/continuation.jl")
-# include("algorithms/extragrad.jl")
+## Step rules
+include("step/gradient.jl")
 
+## Utilities
 include("utils.jl")
 include("data.jl")
 include("ipopt.jl")

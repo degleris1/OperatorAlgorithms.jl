@@ -950,7 +950,7 @@ uuid = "efe28fd5-8261-553b-a9e1-b2916fc3738e"
 version = "0.5.5+0"
 
 [[deps.OperatorAlgorithms]]
-deps = ["Argos", "Artifacts", "JuMP", "LazyArtifacts", "LinearAlgebra", "MathOptInterface", "NLPModels", "NLPModelsIpopt", "NLPModelsJuMP", "PowerModels"]
+deps = ["Argos", "Artifacts", "JuMP", "LazyArtifacts", "LinearAlgebra", "MathOptInterface", "NLPModels", "NLPModelsIpopt", "NLPModelsJuMP", "PowerModels", "SparseArrays"]
 path = ".."
 uuid = "802f6288-8509-4508-bc20-f589516e6c73"
 version = "0.1.0"
