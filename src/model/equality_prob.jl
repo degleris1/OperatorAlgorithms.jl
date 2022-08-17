@@ -6,6 +6,7 @@ struct StandardEqualityBoxProblem{T <: Real} <: EqualityBoxProblem
     _eq_indices
     _ineq_indices
     _A
+    _qr
     _b::Vector{T}
     _xmin::Vector{T}
     _xmax::Vector{T}
@@ -18,6 +19,9 @@ function EqualityBoxProblem(nlp, ω=1.0)
 
     _A = _jacobian(nlp, ω)
     _b = _get_b(nlp)
+    Q, R = qr(_A')
+
+    _qr = Q[:, 1:length(_b)], R
 
     xmin = [get_lvar(nlp); get_lcon(nlp)[_ineq_indices]]
     xmax = [get_uvar(nlp); get_ucon(nlp)[_ineq_indices]]
@@ -28,26 +32,25 @@ function EqualityBoxProblem(nlp, ω=1.0)
     r, c = NLPModels.hess_structure(nlp)
     @assert all(r .== c)
 
-    return StandardEqualityBoxProblem(nlp, ω, _eq_indices, _ineq_indices, _A, _b, xmin, xmax, _g)
+    return StandardEqualityBoxProblem(nlp, ω, _eq_indices, _ineq_indices, _A, _qr, _b, xmin, xmax, _g)
 end
 
 function initialize(P::EqualityBoxProblem)
     xmin, xmax = deepcopy(get_box(P))
 
-
     for i in eachindex(xmin)
         if xmin[i] == -Inf && xmax[i] == Inf
-            xmin[i] = -1
-            xmax[i] = 1
+            xmin[i] = -10
+            xmax[i] = 10
         elseif xmin[i] == -Inf
-            xmin[i] = xmax[i] - 1
+            xmin[i] = xmax[i] - 10
         elseif xmax[i] == Inf
-            xmax[i] = xmin[i] + 1
+            xmax[i] = xmin[i] + 10
         end
     end
 
     x, y = zeros(num_var(P)), zeros(num_con(P))
-    x .= (1/2) .* (xmax - xmin) .+ xmin
+    x .= rand(length(x)) .* (xmax - xmin) .+ xmin
     
     @assert !any(isnan.(x))
 

@@ -10,7 +10,6 @@ Base.@kwdef struct NewtonStep <: AbstractStep
     use_qr::Bool = true
     num_cg_iter::Int = 10
 
-    _qr::IdDict = IdDict()
     _u0::IdDict = IdDict()
 end
 
@@ -38,14 +37,12 @@ function step!(dz, rule::NewtonStep, P::EqualityBoxProblem, z)
 
     elseif solver == :schur_cg
 
-        # Load cache
+        # Load previous solution
         u0 = get!(() -> zero(dz.dual), rule._u0, dz)
+
+        # Optionally load QR factorization
         if use_qr
-            init_qr = () -> begin
-                Q, R = qr(A')
-                return Q[:, 1:length(dz.dual)], R
-            end
-            qr_factors = get!(init_qr, rule._qr, A)
+            qr_factors = P._qr
         else
             qr_factors = nothing
         end
@@ -71,6 +68,7 @@ function solve_explict!(dz, H, A)
 
     # Solve Newton system
     Δ = K \ [dz.primal; dz.dual]
+    #@show extrema(svdvals(Matrix(K)))
 
     # Update
     @. dz.primal = -Δ[1:n]

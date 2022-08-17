@@ -12,11 +12,12 @@ x_opt = stats.solution
 
 # Create and precondition problem
 P = EqualityBoxProblem(opf)
-P = BarrierProblem(P, 1.0)
+P = BarrierProblem(P, 0.001)
 
 # Algorithm parameters
-step = NewtonStep(safety=1.0, solver=:schur_cg, use_qr=true, num_cg_iter=50)
-stopping_criteria = FixedStop(max_iter=10, tol=1e-10)
+#step = NewtonStep(safety=0.01, solver=:schur_cg, use_qr=true, num_cg_iter=100)
+step = NewtonStep(safety=1e-1)
+stopping_criteria = FixedStop(max_iter=200, tol=1e-10)
 
 # Set up algorithm
 history = History(force=[:variable])
