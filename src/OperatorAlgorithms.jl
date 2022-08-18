@@ -37,7 +37,7 @@ import NLPModels
 MOI = MathOptInterface
 
 # Utilities
-using SparseArrays: spzeros
+using SparseArrays: spzeros, sparse
 using LinearAlgebra: pinv, I, opnorm, Diagonal, cond, svdvals, mul!, diag, qr
 import LinearAlgebra: norm
 

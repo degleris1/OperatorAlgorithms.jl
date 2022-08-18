@@ -22,8 +22,8 @@ function step!(dz, rule::NewtonStep, P::EqualityBoxProblem, z)
     @. dz.dual = -dz.dual  # We want Ax - b, not b - Ax
 
     # Caclulate infeasibility
-    pinf = norm(dz.primal)
-    dinf = norm(dz.dual)
+    pinf = norm(dz.dual)
+    dinf = norm(dz.primal)
 
     # Construct Hessian and Jacobian  # TODO Optimize
     H = hessian(P, z)

@@ -13,15 +13,21 @@ struct StandardEqualityBoxProblem{T <: Real} <: EqualityBoxProblem
     _g::Vector{T}
 end
 
-function EqualityBoxProblem(nlp, ω=1.0)
+function EqualityBoxProblem(nlp; ω=1.0, use_qr=false)
     _eq_indices = _get_eq_indices(nlp)
     _ineq_indices = _get_ineq_indices(nlp)
 
     _A = _jacobian(nlp, ω)
     _b = _get_b(nlp)
-    Q, R = qr(_A')
 
-    _qr = Q[:, 1:length(_b)], R
+
+    if use_qr
+        @time _qr = qr(Matrix(_A'))
+        Q, R = _qr.Q, _qr.R
+        @time _qr = Q * Matrix(I, size(_A')...), R  # TODO Optimize
+    else
+        _qr = nothing
+    end
 
     xmin = [get_lvar(nlp); get_lcon(nlp)[_ineq_indices]]
     xmax = [get_uvar(nlp); get_ucon(nlp)[_ineq_indices]]
@@ -261,7 +267,7 @@ end
 
 function _get_b(nlp)
     m = length(_get_ineq_indices(nlp))
-    return [get_lcon(nlp)[_get_eq_indices(nlp)]; zeros(m)]
+    return [zeros(m); get_lcon(nlp)[_get_eq_indices(nlp)]]
 end
 
 
