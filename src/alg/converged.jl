@@ -18,5 +18,6 @@ end
 FixedStop(; max_iter=100, tol=1e-5) = FixedStop(max_iter, tol)
 
 function converged(rule::FixedStop, history::History, prob::EqualityBoxProblem, x, dx)
-    return (history.num_iter > rule.max_iter) || (norm(dx) <= rule.tol)
+    err = sqrt(last(history.primal_infeasibility)^2 + last(history.dual_infeasibility)^2)
+    return (history.num_iter > rule.max_iter) || (err <= rule.tol)
 end

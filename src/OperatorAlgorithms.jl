@@ -10,7 +10,7 @@ export PrimalDual
 export EqualityBoxProblem, BarrierProblem
 
 ## Algorithm
-export descent!
+export descent!, barrier_method!
 export History, distance
 export Backtracking
 export FixedStop
@@ -64,6 +64,7 @@ include("alg/stepsize.jl")
 include("alg/converged.jl")
 include("step/interface.jl")
 include("alg/optimizer.jl")
+include("alg/barrier.jl")
 
 ## Step rules
 include("step/gradient.jl")

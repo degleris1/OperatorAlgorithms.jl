@@ -27,5 +27,9 @@ function descent!(
         update!(z, z, t, dz)  # x := x + t*dx
     end
 
+    # Update history one more time
+    dz, alg_info = step!(dz, step_rule, P, z)
+    update!(history, P, z, alg_info)
+
     return z, history
 end
