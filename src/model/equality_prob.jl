@@ -21,7 +21,7 @@ function EqualityBoxProblem(nlp; ω=1.0, use_qr=false)
     b = _get_b(nlp)
 
     if use_qr
-        @time F = qr(sparse(A'))
+        F = qr(sparse(A'))
     else
         F = nothing
     end

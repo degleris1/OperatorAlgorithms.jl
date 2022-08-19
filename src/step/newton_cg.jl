@@ -25,7 +25,8 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
     else
         F = qr_factors
 
-        b̂ = Rt_div_b(F, b̃)  # R' \ b̃
+        Rt = sparse(F.R')
+        b̂ = Rt_div_b(Rt, F, b̃)  # R' \ b̃
         K = x -> Qtx(F, (H \ Qx(F, x)))  # K = Q' H Q x
 
         u = solve_cg!(u0, K, b̂, num_iter)
@@ -34,7 +35,6 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
         if sqrt(cg_error) > 1e-1
             @warn "CG system only solved to: $(sqrt(cg_error)) accuracy"
         end
-
 
         dy .= R_div_b(F, u)  # R \ u
     end
@@ -110,4 +110,39 @@ end
 
 function Rt_div_b(F, b)
     return F.R' \ (b[F.pcol])
+end
+
+function Rt_div_b(Rt, F, b)
+    return Rt \ (b[F.pcol])
+end
+
+function LinearAlgebra.lmul!(
+    Q::SuiteSparse.SPQR.QRSparseQ, 
+    a::Vector
+)
+    if size(a, 1) != size(Q, 1)
+        throw(DimensionMismatch("size(Q) = $(size(Q)) but size(A) = $(size(a))"))
+    end
+    for l in size(Q.factors, 2):-1:1
+        τl = -Q.τ[l]
+        h = view(Q.factors, :, l)
+        LinearAlgebra.axpy!(τl*LinearAlgebra.dot(h, a), h, a)  # OPTIMIZE
+    end
+    return a
+end
+
+function LinearAlgebra.lmul!(
+    adjQ::LinearAlgebra.Adjoint{<:Any,<:SuiteSparse.SPQR.QRSparseQ}, 
+    a::Vector
+)
+    Q = adjQ.parent
+    if size(a, 1) != size(Q, 1)
+        throw(DimensionMismatch("size(Q) = $(size(Q)) but size(A) = $(size(a))"))
+    end
+    for l in 1:size(Q.factors, 2)
+        τl = -Q.τ[l]
+        h = view(Q.factors, :, l)
+        LinearAlgebra.axpy!(τl'*LinearAlgebra.dot(h, a), h, a)  # OPTIMIZE
+    end
+    return a
 end

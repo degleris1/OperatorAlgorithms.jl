@@ -30,6 +30,8 @@ using NLPModelsJuMP: MathOptNLPModel
 using PowerModels: instantiate_model, DCMPPowerModel, build_opf
 using JuMP: @objective, @variable, @constraint, @NLobjective
 
+import SuiteSparse
+import LinearAlgebra
 import MathOptInterface
 import PowerModels
 import JuMP
