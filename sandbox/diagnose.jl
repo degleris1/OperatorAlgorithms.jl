@@ -3,7 +3,7 @@ include("util.jl")
 using Random
 Random.seed!(0)
 
-opf = load_dc("case30.m"; make_linear=true)
+opf = load_dc("case_ACTIVSg2000.m"; make_linear=true)
 #opf = load_toy(:rand_qp; n=100, m=30, θ=0.0)
 
 # Baseline
@@ -12,16 +12,13 @@ x_opt = stats.solution
 
 # Create and precondition problem
 P = EqualityBoxProblem(opf; use_qr=true)
-#P = BarrierProblem(P, 1.0)
 
 # Algorithm parameters
-step = NewtonStep(safety=1.0, solver=:schur_cg, num_cg_iter=50)
-#stopping_criteria = FixedStop(max_iter=500, tol=1e-10)
+step = NewtonStep(safety=10.0, solver=:schur_cg, num_cg_iter=100)
 
 # Set up algorithm
 history = History(force=[:variable])
-#@time z, history = descent!(step, P; history=history, stop=stopping_criteria)
-@time z, history = barrier_method!(step, P; history=history, ϵ=1e-4, μ=10)
+@time z, history = barrier_method!(step, P; history=history, ϵ=15.0, μ=10)
 
 @show log10(minimum(history.infeasibility))
 @show minimum(distance(history, x_opt)) / norm(x_opt)

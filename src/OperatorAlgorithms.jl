@@ -69,6 +69,7 @@ include("alg/barrier.jl")
 ## Step rules
 include("step/gradient.jl")
 include("step/newton.jl")
+include("step/newton_cg.jl")
 
 ## Utilities
 include("utils.jl")

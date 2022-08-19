@@ -17,20 +17,25 @@ function EqualityBoxProblem(nlp; ω=1.0, use_qr=false)
     _eq_indices = _get_eq_indices(nlp)
     _ineq_indices = _get_ineq_indices(nlp)
 
-    _A = _jacobian(nlp, ω)
-    _b = _get_b(nlp)
-
+    A = _jacobian(nlp, ω)
+    b = _get_b(nlp)
 
     if use_qr
-        @time _qr = qr(Matrix(_A'))
-        Q, R = _qr.Q, _qr.R
-        @time _qr = Q * Matrix(I, size(_A')...), R  # TODO Optimize
+        @time F = qr(sparse(A'))
     else
-        _qr = nothing
+        F = nothing
     end
 
     xmin = [get_lvar(nlp); get_lcon(nlp)[_ineq_indices]]
     xmax = [get_uvar(nlp); get_ucon(nlp)[_ineq_indices]]
+
+    # Get rid of those darned fixed variables! 
+    for i in 1:length(get_lvar(nlp))
+        if xmin[i] == xmax[i]
+            xmin[i] = -Inf
+            xmax[i] = Inf
+        end
+    end
 
     _g = similar(xmin)
 
@@ -38,7 +43,7 @@ function EqualityBoxProblem(nlp; ω=1.0, use_qr=false)
     r, c = NLPModels.hess_structure(nlp)
     @assert all(r .== c)
 
-    return StandardEqualityBoxProblem(nlp, ω, _eq_indices, _ineq_indices, _A, _qr, _b, xmin, xmax, _g)
+    return StandardEqualityBoxProblem(nlp, ω, _eq_indices, _ineq_indices, A, F, b, xmin, xmax, _g)
 end
 
 function initialize(P::EqualityBoxProblem)
@@ -56,7 +61,7 @@ function initialize(P::EqualityBoxProblem)
     end
 
     x, y = zeros(num_var(P)), zeros(num_con(P))
-    x .= rand(length(x)) .* (xmax - xmin) .+ xmin
+    x .= (1/2) .* (xmax - xmin) .+ xmin
     
     @assert !any(isnan.(x))
 
@@ -228,7 +233,7 @@ function num_slack_var(P::EqualityBoxProblem)
 end
 
 function num_con(P::EqualityBoxProblem)
-    return get_ncon(P.nlp)  # m + k
+    return length(P._b)  # m + k
 end
 
 function num_eq_con(P::EqualityBoxProblem)
@@ -251,9 +256,14 @@ function _jacobian(nlp, ω)
     J_i = J_u[ineq, :]
     J_e = J_u[eq, :]
 
+    inds, _ = _get_fixed_vars(nlp)
+    J_z = spzeros(length(inds), n+m)
+    J_z[:, inds] .= I(length(inds))
+
     return ω * [
         J_i -I(m)
         J_e spzeros(k, m)
+        J_z
     ]
 end
 
@@ -267,11 +277,14 @@ end
 
 function _get_b(nlp)
     m = length(_get_ineq_indices(nlp))
-    return [zeros(m); get_lcon(nlp)[_get_eq_indices(nlp)]]
+    _, b_i = _get_fixed_vars(nlp)
+    return [zeros(m); get_lcon(nlp)[_get_eq_indices(nlp)]; b_i]
 end
 
-
-
+function _get_fixed_vars(nlp)
+    inds = nlp.meta.ifix
+    return inds, get_lvar(nlp)[inds]
+end
 
 
 
