@@ -14,12 +14,13 @@ x_opt = stats.solution
 P = EqualityBoxProblem(opf; use_qr=true)
 
 # Algorithm parameters
-step = NewtonStep(safety=10.0, solver=:schur_cg, num_cg_iter=100)
+step = NewtonStep(safety=1.0, solver=:schur_cg, num_cg_iter=100)
 
 # Set up algorithm
 history = History(force=[:variable])
-@time z, history = barrier_method!(step, P; history=history, ϵ=1.0, μ=10)
+@time z, history = barrier_method!(step, P; history=history, ϵ=1e-8, μ=10)
 
+@show length(history.infeasibility)
 @show log10(minimum(history.infeasibility))
 @show minimum(distance(history, x_opt)) / norm(x_opt)
 plt = plot_diagnostics(history, x_opt; xscale=:identity)

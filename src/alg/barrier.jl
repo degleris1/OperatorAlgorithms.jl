@@ -11,6 +11,7 @@ function barrier_method!(
     ϵ=1e-5,
     μ=10.0,
 )
+    # This denotes the TOTAL number of Newton steps during the algorithm
     MAX_INNER_STEP = 1000
 
     # Initialize
