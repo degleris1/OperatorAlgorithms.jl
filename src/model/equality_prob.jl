@@ -11,11 +11,15 @@ struct StandardEqualityBoxProblem{T <: Real} <: EqualityBoxProblem
     _xmin::Vector{T}
     _xmax::Vector{T}
     _g::Vector{T}
+    _hs
 end
 
 function EqualityBoxProblem(nlp; ω=1.0, use_qr=false)
     _eq_indices = _get_eq_indices(nlp)
     _ineq_indices = _get_ineq_indices(nlp)
+
+    m = length(_ineq_indices)
+    n = length(get_lvar(nlp))
 
     A = _jacobian(nlp, ω)
     b = _get_b(nlp)
@@ -30,7 +34,7 @@ function EqualityBoxProblem(nlp; ω=1.0, use_qr=false)
     xmax = [get_uvar(nlp); get_ucon(nlp)[_ineq_indices]]
 
     # Get rid of those darned fixed variables! 
-    for i in 1:length(get_lvar(nlp))
+    for i in 1:n
         if xmin[i] == xmax[i]
             xmin[i] = -Inf
             xmax[i] = Inf
@@ -43,7 +47,7 @@ function EqualityBoxProblem(nlp; ω=1.0, use_qr=false)
     r, c = NLPModels.hess_structure(nlp)
     @assert all(r .== c)
 
-    return StandardEqualityBoxProblem(nlp, ω, _eq_indices, _ineq_indices, A, F, b, xmin, xmax, _g)
+    return StandardEqualityBoxProblem(nlp, ω, _eq_indices, _ineq_indices, A, F, b, xmin, xmax, _g, r)
 end
 
 function initialize(P::EqualityBoxProblem)
@@ -128,10 +132,11 @@ function gradient!(∇f, P::EqualityBoxProblem, z::PrimalDual)
 
     # Update main variables
     u = get_true_vars(P, x)
-    grad!(P.nlp, u, view(∇f, 1:n))
+    grad!(P.nlp, u, get_true_vars(P, ∇f))
 
     # Update slack variables
-    ∇f[n+1:end] .= 0
+    ds = get_slack_vars(P, ∇f)
+    ds .= 0
 
     return ∇f
 end
@@ -146,10 +151,14 @@ function hessian!(H::Diagonal, P::EqualityBoxProblem, z::PrimalDual)
     x = z.primal
 
     # Update first block
-    hess_coord!(P.nlp, view(x, 1:n), view(H.diag, 1:n))
+    Hu = get_true_vars(P, H.diag)
+    Hu_nz = view(Hu, P._hs)
+
+    hess_coord!(P.nlp, get_true_vars(P, x), Hu_nz)
 
     # Update second block
-    H.diag[n+1:n+m] .= 0
+    Hs = get_slack_vars(P, H.diag)
+    Hs .= 0
 
     @assert minimum(H.diag) >= 0 "Min is $(minimum(H))"
 
@@ -213,11 +222,13 @@ end
 # ====
 
 function get_true_vars(P::EqualityBoxProblem, x)
-    return view(x, 1:num_true_var(P))
+    n, m = num_true_var(P), num_slack_var(P)
+    return view(x, 1:n)
 end
 
 function get_slack_vars(P::EqualityBoxProblem, x)
-    return view(x, num_true_var(P)+1:num_true_var(P)+num_slack_var(P))
+    n, m = num_true_var(P), num_slack_var(P)
+    return view(x, n+1:n+m)
 end
 
 function num_var(P::EqualityBoxProblem)
@@ -257,13 +268,13 @@ function _jacobian(nlp, ω)
     J_e = J_u[eq, :]
 
     inds, _ = _get_fixed_vars(nlp)
-    J_z = spzeros(length(inds), n+m)
+    J_z = spzeros(length(inds), n)
     J_z[:, inds] .= I(length(inds))
 
     return ω * [
-        J_i -I(m)
+        J_z spzeros(length(inds), m)
         J_e spzeros(k, m)
-        J_z
+        J_i -I(m)
     ]
 end
 
@@ -278,7 +289,7 @@ end
 function _get_b(nlp)
     m = length(_get_ineq_indices(nlp))
     _, b_i = _get_fixed_vars(nlp)
-    return [zeros(m); get_lcon(nlp)[_get_eq_indices(nlp)]; b_i]
+    return [b_i; get_lcon(nlp)[_get_eq_indices(nlp)]; zeros(m)]
 end
 
 function _get_fixed_vars(nlp)

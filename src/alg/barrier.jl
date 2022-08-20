@@ -10,9 +10,8 @@ function barrier_method!(
     t0=nothing,
     ϵ=1e-5,
     μ=10.0,
+    max_inner_step=100
 )
-    # This denotes the TOTAL number of Newton steps during the algorithm
-    MAX_INNER_STEP = 1000
 
     # Initialize
     z = something(z0, initialize(P))
@@ -31,7 +30,7 @@ function barrier_method!(
             history=history, 
             z0=z, 
             step_size=step_size,
-            stop=FixedStop(MAX_INNER_STEP, t*m),
+            stop=FixedStop(max_inner_step, t*m),
         )
 
         @show t, t*m, last(history.infeasibility)

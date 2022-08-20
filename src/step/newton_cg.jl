@@ -54,7 +54,7 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
 end
 
 # TODO: Cache r, p, w
-function solve_cg!(u0, K, b, num_iter; ϵ=1e-8, upper_tol=1e-1)
+function solve_cg!(u0, K, b, num_iter; ϵ=1e-10, upper_tol=1e-1)
     u = u0  # We override u0
     r = b - K(u0)
     

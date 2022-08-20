@@ -3,22 +3,26 @@ include("util.jl")
 using Random
 Random.seed!(0)
 
-opf = load_dc("case300.m"; make_linear=true)
-#opf = load_toy(:rand_qp; n=100, m=30, θ=0.0)
+# case118, case300
+# case1354pegase, case2869pegase
+# case_ACTIVSg2000
+opf = load_dc("case300.m"; make_linear=false)
 
 # Baseline
 stats = solve_ipopt(opf)
 x_opt = stats.solution
+n = length(x_opt)
 
-# Create and precondition problem
+# Create problem
 P = EqualityBoxProblem(opf; use_qr=true)
 
-# Algorithm parameters
-step = NewtonStep(safety=1.0, solver=:schur_cg, num_cg_iter=100)
+# Specify inner problem solver
+#step = NewtonStep(safety=1.0, solver=:schur_cg, num_cg_iter=200)
+step = NewtonStep()
 
-# Set up algorithm
+# Set up barrier algorithm
 history = History(force=[:variable])
-@time z, history = barrier_method!(step, P; history=history, ϵ=1e-4, μ=10)
+@time z, history = barrier_method!(step, P; history=history, ϵ=1e-4 * sqrt(n), μ=5)
 
 @show length(history.infeasibility)
 @show log10(minimum(history.infeasibility))
