@@ -57,3 +57,19 @@ function hessian!(H::Diagonal, P::BarrierProblem, z::PrimalDual)
 
     return H
 end
+
+function get_multipliers(P::BarrierProblem, z::PrimalDual)
+    # We have t = fi * λi
+    # So λi = t / fi
+
+    x = z.primal
+    xmin, xmax = get_box(P)
+
+    λmin = P.t ./ (x - xmin)
+    λmax = P.t ./ (xmax - x)
+
+    λmin[λmin .== Inf] .= 0
+    λmax[λmax .== Inf] .= 0
+
+    return λmin, λmax
+end

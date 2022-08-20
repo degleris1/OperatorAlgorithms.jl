@@ -16,12 +16,15 @@ function descent!(
     while (!started) || (!converged(stop, history, P, z, dz))
         started = true
         
-        # Choose descent direction and update history
+        # Choose descent direction
         dz, alg_info = step!(dz, step_rule, P, z)
-        update!(history, P, z, alg_info)
-
+        
         # Choose step size
         t = adjust_step!(dz, step_size, P, z)
+
+        # Update history
+        alg_info = (; step_size=t, alg_info...)
+        update!(history, P, z, alg_info)
 
         # Update
         update!(z, z, t, dz)  # x := x + t*dx
@@ -29,7 +32,7 @@ function descent!(
 
     # Update history one more time
     dz, alg_info = step!(dz, step_rule, P, z)
-    update!(history, P, z, alg_info)
+    update!(history, P, z, alg_info; should_inc=true)
 
     return z, history
 end

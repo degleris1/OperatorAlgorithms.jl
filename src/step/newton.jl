@@ -24,6 +24,7 @@ function step!(dz, rule::NewtonStep, P::EqualityBoxProblem, z)
     # Caclulate infeasibility
     pinf = norm(dz.dual)
     dinf = norm(dz.primal)
+    tinf = sqrt(pinf^2 + dinf^2)
 
     # Construct Hessian and Jacobian  # TODO Optimize
     H = hessian(P, z)
@@ -34,19 +35,28 @@ function step!(dz, rule::NewtonStep, P::EqualityBoxProblem, z)
     if solver == :explicit
 
         solve_explict!(dz, H, A)
+        cnt = 1
+        cg_error = 0
 
     elseif solver == :schur_cg
 
         # Load previous solution and QR factors
         u0 = get!(() -> zero(dz.dual), rule._u0, dz)
         qr_factors = use_qr ? P._qr : nothing
-        solve_schur_cg!(dz, H, A; num_iter=num_cg_iter, qr_factors=qr_factors, u0=u0)
+        dz, cnt, cg_error = 
+            solve_schur_cg!(dz, H, A; num_iter=num_cg_iter, qr_factors=qr_factors, u0=u0)
     
     else
         error("Support solvers are [:explicit, :schur_cg]")
     end
 
-    return dz, (primal_infeasibility=pinf, dual_infeasibility=dinf)
+    return dz, (
+        primal_infeasibility=pinf, 
+        dual_infeasibility=dinf, 
+        infeasibility=tinf,
+        cg_iters = cnt,
+        cg_error = cg_error
+    )
 end
 
 # TODO: Optimize

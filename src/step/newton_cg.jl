@@ -19,24 +19,24 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
     # Solve subsystem without QR
     if isnothing(qr_factors)
         K = x -> A * (H \ (A' * x))
-        dy .= solve_cg!(u0, K, b̃, num_iter)
+
+        u, cnt, cg_error .= solve_cg!(u0, K, b̃, num_iter)
+        dy .= u
 
     # Solve subsystem with QR
     else
         F = qr_factors
-
         Rt = sparse(F.R')
         b̂ = Rt_div_b(Rt, F, b̃)  # R' \ b̃
         K = x -> Qtx(F, (H \ Qx(F, x)))  # K = Q' H Q x
 
-        u = solve_cg!(u0, K, b̂, num_iter)
-
-        cg_error = norm(K(u) - b̂)
-        if sqrt(cg_error) > 1e-1
-            @warn "CG system only solved to: $(sqrt(cg_error)) accuracy"
-        end
-
+        u, cnt, cg_error = solve_cg!(u0, K, b̂, num_iter)
         dy .= R_div_b(F, u)  # R \ u
+
+    end
+
+    if sqrt(cg_error) > 1e-1
+        @warn "CG system only solved to: $(sqrt(cg_error)) accuracy"
     end
 
     # Back solve
@@ -50,7 +50,7 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
     @. dz.primal = -dz.primal
     @. dz.dual = -dz.dual
 
-    return dz
+    return dz, cnt, cg_error
 end
 
 # TODO: Cache r, p, w
@@ -62,10 +62,13 @@ function solve_cg!(u0, K, b, num_iter; ϵ=1e-10, upper_tol=1e-1)
     w = zero(b)
 
     rho = [norm(r)^2]
+    cnt = 0
     for iter in 1:num_iter
         if sqrt(rho[iter]) < ϵ
             break
         end
+
+        cnt += 1
 
         w .= K(p)
         α = rho[iter] / (p'w)
@@ -78,7 +81,7 @@ function solve_cg!(u0, K, b, num_iter; ϵ=1e-10, upper_tol=1e-1)
         @. p = r + (rho[iter+1] / rho[iter]) * p
     end
 
-    return u
+    return u, cnt, sqrt(rho[end])
 end
 
 # ====

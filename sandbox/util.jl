@@ -23,24 +23,35 @@ function crd(i, data)
     return [x[i] for x in data]
 end
 
-function plot_diagnostics(history, x_opt; height=5, width=20, start=1, xscale=:log10)
+function plot_diagnostics(history, x_opt; height=5, width=20, start=1, xscale=:identity)
+    EPS = 1e-15
     ucp = (
-#        xticks=10 .^ (0:floor(Int, log10.(length(history.primal_infeasibility)))),
-#        xticks=[0, 0.9*length(history.primal_infeasibility)],
-        xlim=(1, length(history.primal_infeasibility)),
         xscale=xscale,
+        lw=2,
+        linetype=:steppost
     )
-    plt = plot(
-        plot(history.primal_infeasibility[start:end] .+ 1e-15;
-             ylabel="Primal Infeasibility", yscale=:log10, ucp...),
-        plot(history.dual_infeasibility[start:end] .+ 1e-15; 
-             ylabel="Dual Infeasibility", yscale=:log10, ucp...),
-        plot(distance(history, x_opt)[start:end] / length(x_opt); 
-             ylabel="rms(x - x*)", ucp...),
-        plot(history.infeasibility[start:end]; 
-             ylabel="Total Infeasibility", yscale=:log10, ucp...),
-        layout = (2, 2),
-    )
+
+    x = cumsum(history.cg_iters)
+    pinf = history.primal_infeasibility
+    dinf = history.dual_infeasibility
+    tinf = history.infeasibility
+    
+    plt1 = plot(x, pinf .+ EPS; ylabel="Primal Infeasibility", yscale=:log10, ucp...)
+    plot!(plt1, [x[1]; x[history.num_step]], [pinf[1]; history.true_pinf]; ucp...)
+
+    plt2 = plot(x, dinf .+ EPS; ylabel="Dual Infeasibility", yscale=:log10, ucp...)
+    plot!(plt2, [x[1]; x[history.num_step]], [dinf[1]; history.true_dinf]; ucp...)
+    plot!(plt2, xlabel="Num CG Iters")
+
+    # plt4 = plot(x, tinf .+ EPS; ylabel="Total Infeasibility", yscale=:log10, ucp...)
+    # if :variable in keys(history.data)
+    #     plt3 = plot(x, distance(history, x_opt) / length(x_opt);  ylabel="rms(x - x*)", ucp...)
+    # else
+    #     plt3 = deepcopy(plt4)
+    # end
+
+    plt = plot(plt1, plt2, layout=(2, 1))
+
     return plt
 end
 

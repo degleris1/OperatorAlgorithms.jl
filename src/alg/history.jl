@@ -3,21 +3,16 @@
 # ====
 
 Base.@kwdef mutable struct History
-    primal_residual = []
-    dual_residual = []
-    primal_infeasibility::Vector{Real} = []
-    dual_infeasibility::Vector{Real} = []
-    objective::Vector{Real} = []
-    variable = []
+    data::Dict{Symbol, Any} = Dict{Symbol, Any}()
     force::Vector{Symbol} = []
     num_iter::Int = 0
 end
 
 function Base.getproperty(h::History, s::Symbol)
-    if s == :infeasibility
-        return sqrt.(h.primal_infeasibility .^ 2 + h.dual_infeasibility .^ 2)
-    else
+    if hasfield(typeof(h), s)
         return getfield(h, s)
+    else
+        return get(() -> error("No data on $(s)"), h.data, s)
     end
 end
 
@@ -33,7 +28,7 @@ function dual_infeasibility(p, z)
     return norm(dual_residual(p, z))
 end
 
-function update!(history::History, prob, z, alg_info)
+function update!(history::History, prob, z, alg_info; should_inc=true, should_force=true)
 
     KEYS = [
         :primal_residual, :dual_residual, 
@@ -49,17 +44,25 @@ function update!(history::History, prob, z, alg_info)
         dual_infeasibility,
     ]
 
-    for (k, f) in zip(KEYS, fs)
-        if k in keys(alg_info)
-            data = getproperty(history, k)
-            push!(data, getproperty(alg_info, k))
-        elseif k in history.force
-            data = getproperty(history, k)
-            push!(data, f(prob, z))
+    # Add algorithm info
+    for k in keys(alg_info)
+        hist = get!(history.data, k, [])
+        push!(hist, getproperty(alg_info, k))
+    end
+
+    # Add extra info
+    if should_force
+        for (k, f) in zip(KEYS, fs)
+            if (k in history.force) && !(k in keys(alg_info))
+                hist = get!(history.data, k, [])
+                push!(hist, f(prob, z))
+            end
         end
     end
 
-    history.num_iter += 1
+    if should_inc
+        history.num_iter += 1
+    end
 
     return history
 end

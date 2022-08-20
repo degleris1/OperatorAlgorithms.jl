@@ -112,6 +112,17 @@ function dual_residual!(rd, P::EqualityBoxProblem, z::PrimalDual)
     return rd
 end
 
+function dual_residual(P::EqualityBoxProblem, z::PrimalDual, λmin, λmax)
+    rd = similar(z.primal)
+    dual_residual!(rd, P, z)
+
+    x = z.primal
+    xmin, xmax = get_box(P)
+
+    rd += -λmin + λmax
+    return rd
+end
+
 # ====
 # OBJECTIVE, GRADIENT, CONSTRAINTS
 # ====

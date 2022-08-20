@@ -10,9 +10,10 @@ function step!(dz, rule::GradientStep, P::EqualityBoxProblem, z)
 
     pinf = norm(dz.primal)
     dinf = norm(dz.dual)
+    tinf = sqrt(pinf^2 + dinf^2)
     
     @. dz.primal = -dz.primal
     @. dz.dual = -dz.dual
 
-    return dz, (primal_infeasibility=pinf, dual_infeasibility=dinf)
+    return dz, (primal_infeasibility=pinf, dual_infeasibility=dinf, infeasibility=tinf)
 end
