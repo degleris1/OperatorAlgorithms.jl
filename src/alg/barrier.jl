@@ -38,8 +38,6 @@ function barrier_method!(
 
         # Update t
         t = t / μ
-
-        # TODO Update dual variables between iterations
     end
 
     return z, history
