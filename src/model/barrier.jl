@@ -1,6 +1,6 @@
-struct BarrierProblem <: EqualityBoxProblem
+struct BarrierProblem{T <: Real} <: EqualityBoxProblem
     P::EqualityBoxProblem
-    t::Real
+    t::T
 end
 
 function Base.getproperty(P::BarrierProblem, s::Symbol)

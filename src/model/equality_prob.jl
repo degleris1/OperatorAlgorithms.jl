@@ -2,16 +2,33 @@ abstract type EqualityBoxProblem end
 
 struct StandardEqualityBoxProblem{T <: Real} <: EqualityBoxProblem
     nlp
-    ω
-    _eq_indices
-    _ineq_indices
-    _A
-    _qr
-    _b::Vector{T}
-    _xmin::Vector{T}
-    _xmax::Vector{T}
-    _g::Vector{T}
-    _hs
+    ω::T
+    _eq_indices::Vector{Int}
+    _ineq_indices::Vector{Int}
+    _A::AbstractSparseMatrix{T, Int}
+    _qr::SuiteSparse.SPQR.QRSparse{T, Int64}
+    _b::AbstractArray{T}
+    _xmin::AbstractArray{T}
+    _xmax::AbstractArray{T}
+    _g::AbstractArray{T}
+    _hs::Vector{Int}
+end
+
+function apply_type(P::StandardEqualityBoxProblem, mat_type, vec_type)
+    new_qr = P._qr
+    return StandardEqualityBoxProblem(
+        P.nlp,
+        P.ω,
+        P._eq_indices,
+        P._ineq_indices,
+        mat_type(P._A),
+        new_qr,
+        vec_type(P._b),
+        vec_type(P._xmin),
+        vec_type(P._xmax),
+        vec_type(P._g),
+        P._hs
+    )
 end
 
 function EqualityBoxProblem(nlp; ω=1.0, use_qr=false)
@@ -64,7 +81,7 @@ function initialize(P::EqualityBoxProblem)
         end
     end
 
-    x, y = zeros(num_var(P)), zeros(num_con(P))
+    x, y = zero(xmin), zero(P._b)
     x .= (1/2) .* (xmax - xmin) .+ xmin
     
     @assert !any(isnan.(x))
@@ -149,6 +166,8 @@ function gradient!(∇f, P::EqualityBoxProblem, z::PrimalDual)
     ds = get_slack_vars(P, ∇f)
     ds .= 0
 
+    ∇f .*= P.ω
+
     return ∇f
 end
 
@@ -170,6 +189,8 @@ function hessian!(H::Diagonal, P::EqualityBoxProblem, z::PrimalDual)
     # Update second block
     Hs = get_slack_vars(P, H.diag)
     Hs .= 0
+
+    H.diag .*= P.ω
 
     @assert minimum(H.diag) >= 0 "Min is $(minimum(H))"
 

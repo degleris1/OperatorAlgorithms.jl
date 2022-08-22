@@ -1,12 +1,14 @@
 using Pkg; Pkg.activate(@__DIR__)
+
 using LinearAlgebra
 using Plots
-gr()
-theme(:default; label=nothing, titlefontsize=10, guidefontsize=10, tickfontsize=8)
+import NLPModels
 
 using Revise
 using OperatorAlgorithms
 
+gr()
+theme(:default; label=nothing, titlefontsize=10, guidefontsize=10, tickfontsize=8)
 OperatorAlgorithms.PowerModels.Memento.config!("error")
 
 function rolling(x, f=minimum)

@@ -129,7 +129,8 @@ function LinearAlgebra.lmul!(
     for l in size(Q.factors, 2):-1:1
         τl = -Q.τ[l]
         h = view(Q.factors, :, l)
-        LinearAlgebra.axpy!(τl*LinearAlgebra.dot(h, a), h, a)  # OPTIMIZE
+        α = LinearAlgebra.dot(h, a)  # OPTIMIZE (50% of runtime)
+        LinearAlgebra.axpy!(τl*α, h, a)  # OPTIMIZE (25% of runtime)
     end
     return a
 end
@@ -145,7 +146,8 @@ function LinearAlgebra.lmul!(
     for l in 1:size(Q.factors, 2)
         τl = -Q.τ[l]
         h = view(Q.factors, :, l)
-        LinearAlgebra.axpy!(τl'*LinearAlgebra.dot(h, a), h, a)  # OPTIMIZE
+        α = LinearAlgebra.dot(h, a)  # OPTIMIZE
+        LinearAlgebra.axpy!(τl'*α, h, a)  # OPTIMIZE
     end
     return a
 end

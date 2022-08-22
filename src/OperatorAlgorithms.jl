@@ -8,6 +8,7 @@ export solve_ipopt
 ## Model
 export PrimalDual
 export EqualityBoxProblem, BarrierProblem
+export apply_type
 
 ## Algorithm
 export descent!, barrier_method!
@@ -39,7 +40,7 @@ import NLPModels
 MOI = MathOptInterface
 
 # Utilities
-using SparseArrays: spzeros, sparse
+using SparseArrays: spzeros, sparse, AbstractSparseMatrix
 using LinearAlgebra: pinv, I, opnorm, Diagonal, cond, svdvals, mul!, diag, qr
 import LinearAlgebra: norm
 
