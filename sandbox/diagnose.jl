@@ -5,11 +5,11 @@ Random.seed!(0)
 
 # case118, case300
 # case1354pegase, case2869pegase, case13659pegase
-# case_ACTIVSg2000
-opf = load_dc("case2869pegase.m")
+# case_ACTIVSg2000, case_ACTIVSg10k, case_ACTIVSg70k
+opf = load_dc("matpower/case118.m")
 
 # Baseline
-stats = solve_ipopt(opf)
+@time stats = solve_ipopt(opf)
 x_opt = stats.solution
 scale = norm(NLPModels.grad(opf, x_opt))
 
@@ -22,10 +22,11 @@ step = NewtonStep(safety=1.0, solver=:schur_cg, num_cg_iter=200)
 # Set up barrier algorithm
 history = History()
 @time z, history = barrier_method!(step, P; history=history, ϵ=1e-4*scale, μ=5)
+pstar = OperatorAlgorithms.objective(P, z)
 
 @show history.num_iter, sum(history.cg_iters)
 @show log10(minimum(history.infeasibility))
-@show OperatorAlgorithms.objective(P, z) / stats.objective
+@show log10( abs(pstar - stats.objective) / abs(stats.objective))
 plt = plot_diagnostics(history, x_opt)
 
 # using Profile

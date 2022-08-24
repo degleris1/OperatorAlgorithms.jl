@@ -20,17 +20,19 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
     if isnothing(qr_factors)
         K = x -> A * (H \ (A' * x))
 
-        u, cnt, cg_error .= solve_cg!(u0, K, b̃, num_iter)
+        u, cnt, cg_error = solve_cg!(u0, K, b̃, num_iter)
         dy .= u
 
     # Solve subsystem with QR
     else
         F = qr_factors
         Rt = sparse(F.R')
-        b̂ = Rt_div_b(Rt, F, b̃)  # R' \ b̃
-        K = x -> Qtx(F, (H \ Qx(F, x)))  # K = Q' H Q x
 
+        b̂ = Rt_div_b(Rt, F, b̃)  # R' \ b̃
+
+        K = x -> Qtx(F, (H \ Qx(F, x)))  # K = Q' H Q x
         u, cnt, cg_error = solve_cg!(u0, K, b̂, num_iter)
+
         dy .= R_div_b(F, u)  # R \ u
 
     end
@@ -150,4 +152,58 @@ function LinearAlgebra.lmul!(
         LinearAlgebra.axpy!(τl'*α, h, a)  # OPTIMIZE
     end
     return a
+end
+
+
+
+function _test_my_lmul!(Q::SuiteSparse.SPQR.QRSparseQ, A; block=1, block_size=1024)
+    if size(A, 1) != size(Q, 1)
+        throw(DimensionMismatch("size(Q) = $(size(Q)) but size(A) = $(size(A))"))
+    end
+    At = sparse(A')
+
+    for l in ((block-1)*block_size+1) : min((block * block_size), size(Q.factors, 2))
+        # A = A + τl h (A'h)'
+        
+        τl = -Q.τ[l]
+        h = view(Q.factors, :, l)
+
+        for j in 1:size(A, 2)
+            a = view(A, :, j)
+            LinearAlgebra.axpy!(τl*LinearAlgebra.dot(h, a), h, a)
+        end
+    end
+    return A
+end
+
+function get_block(Q::SuiteSparse.SPQR.QRSparseQ; block_id=1, block_size=512)
+    n = size(Q.factors, 1)
+    K = size(Q.factors, 2)
+    r = block_size
+
+    block = (r*(block_id-1)+1) : min(r*block_id, K)
+    V = Q.factors[:, block]
+    β = Q.τ[block]
+
+    W = spzeros(n, r)
+    Y = spzeros(n, r)
+
+    Y[:, 1] = V[:, 1]
+    W[:, 1] = -β[1] * V[:, 1]
+
+    for j in 2:r
+        v = V[:, 2]
+        z = -β[j]*v - β[j]*(W*(Y' * v))
+        W[:, j] .= z
+        Y[:, j] .= v
+    end
+
+    return W, Y
+end
+
+function get_all_blocks(Q::SuiteSparse.SPQR.QRSparseQ; block_size=512)
+    K = size(Q.factors, 2)
+    num_blocks = ceil(Int, K/block_size)
+
+    return [get_block(Q; block_id=k, block_size=block_size) for k in 1:num_blocks]
 end

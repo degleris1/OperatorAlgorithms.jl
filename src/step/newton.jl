@@ -14,7 +14,9 @@ Base.@kwdef struct NewtonStep <: AbstractStep
 end
 
 # TODO: Eliminate gradient and Hessian allocations
-function step!(dz, rule::NewtonStep, P::EqualityBoxProblem, z)
+function step!(
+    dz::PrimalDual{T}, rule::NewtonStep, P::EqualityBoxProblem, z::PrimalDual{T}
+) where {T <: Real}
     (; solver, safety, use_qr, num_cg_iter) = rule
 
     # Compute gradient ∇L
@@ -28,8 +30,12 @@ function step!(dz, rule::NewtonStep, P::EqualityBoxProblem, z)
 
     # Construct Hessian and Jacobian  # TODO Optimize
     H = hessian(P, z)
+    #println("Hessian Extrema: $(maximum(H.diag))")
     @. H.diag += safety
     A = jacobian(P, z)
+
+    # Report condition number
+    #println("Condition Number: $(maximum(H.diag) / minimum(H.diag))")
 
     # Solve
     if solver == :explicit

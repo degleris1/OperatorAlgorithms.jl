@@ -3,15 +3,15 @@ abstract type EqualityBoxProblem end
 struct StandardEqualityBoxProblem{T <: Real} <: EqualityBoxProblem
     nlp
     ω::T
-    _eq_indices::Vector{Int}
-    _ineq_indices::Vector{Int}
+    _eq_indices::AbstractArray{Int, 1}
+    _ineq_indices::AbstractArray{Int, 1}
     _A::AbstractSparseMatrix{T, Int}
-    _qr::SuiteSparse.SPQR.QRSparse{T, Int64}
-    _b::AbstractArray{T}
-    _xmin::AbstractArray{T}
-    _xmax::AbstractArray{T}
-    _g::AbstractArray{T}
-    _hs::Vector{Int}
+    _qr::SuiteSparse.SPQR.QRSparse{T, Int}
+    _b::AbstractArray{T, 1}
+    _xmin::AbstractArray{T, 1}
+    _xmax::AbstractArray{T, 1}
+    _g::AbstractArray{T, 1}
+    _hs::AbstractArray{Int, 1}
 end
 
 function apply_type(P::StandardEqualityBoxProblem, mat_type, vec_type)
@@ -42,7 +42,7 @@ function EqualityBoxProblem(nlp; ω=1.0, use_qr=false)
     b = _get_b(nlp)
 
     if use_qr
-        F = qr(sparse(A'))
+        @time F = qr(sparse(A'))
     else
         F = nothing
     end
@@ -84,7 +84,7 @@ function initialize(P::EqualityBoxProblem)
     x, y = zero(xmin), zero(P._b)
     x .= (1/2) .* (xmax - xmin) .+ xmin
     
-    @assert !any(isnan.(x))
+    @assert all(isfinite.(x))
 
     return PrimalDual(x, y)
 end

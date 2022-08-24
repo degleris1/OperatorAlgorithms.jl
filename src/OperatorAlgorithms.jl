@@ -66,7 +66,7 @@ include("alg/history.jl")
 include("alg/stepsize.jl")
 include("alg/converged.jl")
 include("step/interface.jl")
-include("alg/optimizer.jl")
+include("alg/descent.jl")
 include("alg/barrier.jl")
 
 ## Step rules
