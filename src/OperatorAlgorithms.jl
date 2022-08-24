@@ -1,5 +1,7 @@
 module OperatorAlgorithms
 
+export BlockyHouseholderQ
+
 # Exports
 ## Helpers
 export load_dc, write_mps_dc, load_toy
@@ -24,7 +26,7 @@ export GradientStep, NewtonStep
 #export Dommel, HybridGradient, Restarted, Continuation, Newton, TruncNewton
 
 # Imports
-# Data Loading
+## Data Loading
 using LazyArtifacts
 using Argos: ReducedSpaceEvaluator, OPFModel
 using NLPModelsJuMP: MathOptNLPModel
@@ -39,19 +41,23 @@ import JuMP
 import NLPModels
 MOI = MathOptInterface
 
-# Utilities
+## Utilities
 using SparseArrays: spzeros, sparse, AbstractSparseMatrix
-using LinearAlgebra: pinv, I, opnorm, Diagonal, cond, svdvals, mul!, diag, qr
-import LinearAlgebra: norm
+using SuiteSparse.SPQR: QRSparseQ
+using LinearAlgebra: Adjoint, Diagonal
+using LinearAlgebra: pinv, I, opnorm, cond, svdvals, mul!, diag, qr
 
-# Modeling
+## Modeling
 using NLPModels: get_x0, get_nvar, get_ncon
 using NLPModels: get_lvar, get_uvar, get_lcon, get_ucon, get_jfix
 using NLPModels: obj, grad!, hess, hess_coord!
 using NLPModels: cons!, jac, jtprod!
 
-# Solvers
+## Solvers
 using NLPModelsIpopt: ipopt
+
+## Override
+import LinearAlgebra: norm
 
 # Code
 ## Primal dual object
@@ -62,6 +68,7 @@ include("model/equality_prob.jl")
 include("model/barrier.jl")
 
 ## Algorithm core code
+include("alg/qr.jl")
 include("alg/history.jl")
 include("alg/stepsize.jl")
 include("alg/converged.jl")
