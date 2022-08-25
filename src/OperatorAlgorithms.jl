@@ -9,7 +9,7 @@ export solve_ipopt
 
 ## Model
 export PrimalDual
-export EqualityBoxProblem, BarrierProblem
+export BoxQP, BarrierProblem
 export apply_type
 
 ## Algorithm
@@ -44,8 +44,8 @@ MOI = MathOptInterface
 ## Utilities
 using SparseArrays: spzeros, sparse, AbstractSparseMatrix
 using SuiteSparse.SPQR: QRSparseQ
-using LinearAlgebra: Adjoint, Diagonal
-using LinearAlgebra: pinv, I, opnorm, cond, svdvals, mul!, diag, qr
+using LinearAlgebra: Adjoint, Diagonal, I
+using LinearAlgebra: dot, cond, svdvals, mul!, diag, qr
 
 ## Modeling
 using NLPModels: get_x0, get_nvar, get_ncon
@@ -64,8 +64,9 @@ import LinearAlgebra: norm
 include("primal_dual_vector.jl")
 
 ## Optimization problems
-include("model/equality_prob.jl")
+include("model/qp.jl")
 include("model/barrier.jl")
+include("model/convert_nlp.jl")
 
 ## Algorithm core code
 include("alg/qr.jl")

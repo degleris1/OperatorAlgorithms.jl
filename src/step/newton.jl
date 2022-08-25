@@ -29,10 +29,10 @@ function step!(
     tinf = sqrt(pinf^2 + dinf^2)
 
     # Construct Hessian and Jacobian  # TODO Optimize
+    A = P.A
     H = hessian(P, z)
     #println("Hessian Extrema: $(maximum(H.diag))")
     @. H.diag += safety
-    A = jacobian(P, z)
 
     # Report condition number
     #println("Condition Number: $(maximum(H.diag) / minimum(H.diag))")
@@ -48,7 +48,7 @@ function step!(
 
         # Load previous solution and QR factors
         u0 = get!(() -> zero(dz.dual), rule._u0, dz)
-        qr_factors = use_qr ? P._qr : nothing
+        qr_factors = use_qr ? P.F_A : nothing
         dz, cnt, cg_error = 
             solve_schur_cg!(dz, H, A; num_iter=num_cg_iter, qr_factors=qr_factors, u0=u0)
     

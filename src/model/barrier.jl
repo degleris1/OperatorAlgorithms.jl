@@ -46,16 +46,16 @@ function gradient!(∇f, P::BarrierProblem, z::PrimalDual)
     return ∇f
 end
 
-function hessian!(H::Diagonal, P::BarrierProblem, z::PrimalDual)
-    hessian!(H, P.P, z)
+function hessian_diag!(h, P::BarrierProblem, z::PrimalDual)
+    hessian_diag!(h, P.P, z)
 
     x = z.primal
     xmin, xmax = get_box(P)
 
-    @. H.diag += P.t * (1 / (x - xmin))^2
-    @. H.diag += P.t * (1 / (xmax - x))^2
+    @. h += P.t * (1 / (x - xmin))^2
+    @. h += P.t * (1 / (xmax - x))^2
 
-    return H
+    return h
 end
 
 function get_multipliers(P::BarrierProblem, z::PrimalDual)
