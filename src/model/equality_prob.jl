@@ -14,22 +14,35 @@ struct StandardEqualityBoxProblem{T <: Real} <: EqualityBoxProblem
     _hs::AbstractArray{Int, 1}
 end
 
-function apply_type(P::StandardEqualityBoxProblem, mat_type, vec_type)
-    new_qr = P._qr
-    return StandardEqualityBoxProblem(
-        P.nlp,
-        P.ω,
-        P._eq_indices,
-        P._ineq_indices,
-        mat_type(P._A),
-        new_qr,
-        vec_type(P._b),
-        vec_type(P._xmin),
-        vec_type(P._xmax),
-        vec_type(P._g),
-        P._hs
-    )
+struct BoxQuadraticProblem{
+    VT <: AbstractVector{<: Real}, 
+    MT <: AbstractSparseMatrix{<: Real}
+} <: EqualityBoxProblem
+    c_q::VT
+    c_l::VT
+    A::MT
+    b::VT
+    xmin::VT
+    xmax::VT
+    F_A
 end
+
+# function apply_type(P::StandardEqualityBoxProblem, mat_type, vec_type)
+#     new_qr = P._qr
+#     return StandardEqualityBoxProblem(
+#         P.nlp,
+#         P.ω,
+#         P._eq_indices,
+#         P._ineq_indices,
+#         mat_type(P._A),
+#         new_qr,
+#         vec_type(P._b),
+#         vec_type(P._xmin),
+#         vec_type(P._xmax),
+#         vec_type(P._g),
+#         P._hs
+#     )
+# end
 
 function EqualityBoxProblem(nlp; ω=1.0, use_qr=false)
     _eq_indices = _get_eq_indices(nlp)
@@ -121,11 +134,11 @@ function dual_residual(P::EqualityBoxProblem, z::PrimalDual)
 end
 
 function dual_residual!(rd, P::EqualityBoxProblem, z::PrimalDual)
-    ∇f = gradient!(P._g, P, z)
-
+    A = jacobian(P, z)
+    
     # ∇f + A' y
-    jacobian_transpose_product!(rd, P, z, z.dual)
-    @. rd += ∇f
+    gradient!(rd, P, z)  #  rd = ∇f
+    mul!(rd, A', z.dual, 1.0, 1.0)  # rd += A' y
     return rd
 end
 
