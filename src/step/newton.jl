@@ -31,6 +31,9 @@ function step!(
     # Construct Hessian and Jacobian  # TODO Optimize
     A = P.A
     H = hessian(P, z)
+
+    @show maximum(H.diag), minimum(H.diag[H.diag .> 0])
+
     #println("Hessian Extrema: $(maximum(H.diag))")
     @. H.diag += safety
 

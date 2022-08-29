@@ -6,7 +6,7 @@ Random.seed!(0)
 # case118, case300
 # case1354pegase, case2869pegase, case13659pegase
 # case_ACTIVSg2000, case_ACTIVSg10k, case_ACTIVSg70k
-opf = load_dc("matpower/case2869pegase.m"; make_linear=true)
+opf = load_dc("matpower/case2869pegase.m")
 
 # Baseline
 @time stats = solve_ipopt(opf)
@@ -17,7 +17,8 @@ scale = norm(NLPModels.grad(opf, x_opt))
 P = BoxQP(opf; use_qr=true)
 
 # Specify inner problem solver
-step = NewtonStep(safety=1.0, solver=:schur_cg, num_cg_iter=200)
+step = NewtonStep(safety=1.0, solver=:schur_cg, num_cg_iter=250)
+#step = NewtonStep()
 
 # Set up barrier algorithm
 history = History()
@@ -31,7 +32,7 @@ plt = plot_diagnostics(history, x_opt)
 
 # using Profile
 # Profile.clear()
-# @profile barrier_method!(step, P; history=history, ϵ=1e-4, μ=5)
+# @profile barrier_method!(step, P; history=history, ϵ=1e-4*scale, μ=5)
 # println()
 
 # using SparseArrays, SuiteSparse

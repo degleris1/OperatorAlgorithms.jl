@@ -10,7 +10,10 @@ function descent!(
 )
     # Initialize
     started = false
-    z = something(z0, initialize(P))
+    z = z0
+    if isnothing(z)
+        z = initialize(P)
+    end
     dz = zero(z)
 
     while (!started) || (!converged(stop, history, P, z, dz))

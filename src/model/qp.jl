@@ -1,19 +1,5 @@
 abstract type EqualityBoxProblem end
 
-struct StandardEqualityBoxProblem{T <: Real} <: EqualityBoxProblem
-    nlp
-    ω::T
-    _eq_indices::AbstractArray{Int, 1}
-    _ineq_indices::AbstractArray{Int, 1}
-    _A::AbstractSparseMatrix{T, Int}
-    _qr::SuiteSparse.SPQR.QRSparse{T, Int}
-    _b::AbstractArray{T, 1}
-    _xmin::AbstractArray{T, 1}
-    _xmax::AbstractArray{T, 1}
-    _g::AbstractArray{T, 1}
-    _hs::AbstractArray{Int, 1}
-end
-
 struct BoxQuadraticProblem <: EqualityBoxProblem
     c_q::AbstractVector{<: Real}
     c_l::AbstractVector{<: Real}
@@ -22,7 +8,7 @@ struct BoxQuadraticProblem <: EqualityBoxProblem
     b::AbstractVector{<: Real}
     xmin::AbstractVector{<: Real}
     xmax::AbstractVector{<: Real}
-    F_A
+    F_A::FancyQR{<: AbstractSparseMatrix{<: Real}}
 end
 
 function initialize(P::EqualityBoxProblem)
@@ -41,7 +27,8 @@ function initialize(P::EqualityBoxProblem)
 
     x, y = zero(xmin), zero(P.b)
     x .= (1/2) .* (xmax - xmin) .+ xmin
-    
+
+    @show norm(P.A * x - P.b)
     @assert all(isfinite.(x))
 
     return PrimalDual(x, y)

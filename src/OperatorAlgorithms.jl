@@ -62,6 +62,8 @@ import LinearAlgebra: norm
 # Code
 ## Primal dual object
 include("primal_dual_vector.jl")
+include("linalg/block_householder.jl")
+include("linalg/qr.jl")
 
 ## Optimization problems
 include("model/qp.jl")
@@ -69,7 +71,6 @@ include("model/barrier.jl")
 include("model/convert_nlp.jl")
 
 ## Algorithm core code
-include("alg/qr.jl")
 include("alg/history.jl")
 include("alg/stepsize.jl")
 include("alg/converged.jl")

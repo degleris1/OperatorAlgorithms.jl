@@ -26,9 +26,8 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
     # Solve subsystem with QR
     else
         F = qr_factors
-        Rt = sparse(F.R')
 
-        b̂ = Rt_div_b(Rt, F, b̃)  # R' \ b̃
+        b̂ = Rt_div_b(F, b̃)  # R' \ b̃
 
         K = x -> Qtx(F, (H \ Qx(F, x)))  # K = Q' H Q x
         u, cnt, cg_error = solve_cg!(u0, K, b̂, num_iter)
@@ -37,7 +36,7 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
 
     end
 
-    if sqrt(cg_error) > 1e-1
+    if cg_error > 1e-2
         @warn "CG system only solved to: $(sqrt(cg_error)) accuracy"
     end
 
@@ -56,17 +55,20 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
 end
 
 # TODO: Cache r, p, w
-function solve_cg!(u0, K, b, num_iter; ϵ=1e-10, upper_tol=1e-1)
-    u = u0  # We override u0
-    r = b - K(u0)
+function solve_cg!(u, K, b, num_iter; atol=1e-10, rtol=1e-4)
+
+    u .= b  # The gradient direction is a good initial guess at the Newton direction
+    r = b - K(u)
     
     p = copy(r)
     w = zero(b)
 
     rho = [norm(r)^2]
     cnt = 0
+    norm_b = norm(b)
+
     for iter in 1:num_iter
-        if sqrt(rho[iter]) < ϵ
+        if sqrt(rho[iter]) < atol + rtol*norm_b
             break
         end
 
@@ -82,8 +84,9 @@ function solve_cg!(u0, K, b, num_iter; ϵ=1e-10, upper_tol=1e-1)
         
         @. p = r + (rho[iter+1] / rho[iter]) * p
     end
+    @show cnt, norm_b, sqrt(rho[end])
 
-    return u, cnt, sqrt(rho[end])
+    return u, cnt, sqrt(rho[end]) / norm_b
 end
 
 # ====
@@ -96,17 +99,17 @@ function Rx(F, x)
 end
 
 function Rtx(F, x)
-    return (F.R' * x)[invperm(F.pcol)]
+    return (F.Rt * x)[invperm(F.pcol)]
 end
 
 function Qx(F, x)
     m, n = length(F.prow), length(F.pcol)
-    return (F.Q * [x; zeros(m - n)])[invperm(F.prow)]
+    return (F.Q * x)[invperm(F.prow)]
 end
 
 function Qtx(F, x)
     m, n = length(F.prow), length(F.pcol)
-    return (F.Q' * x[F.prow])[1:n]
+    return F.Q' * x[F.prow]
 end
 
 function R_div_b(F, b)
@@ -114,9 +117,5 @@ function R_div_b(F, b)
 end
 
 function Rt_div_b(F, b)
-    return F.R' \ (b[F.pcol])
-end
-
-function Rt_div_b(Rt, F, b)
-    return Rt \ (b[F.pcol])
+    return F.Rt \ b[F.pcol]
 end
