@@ -115,8 +115,8 @@ function R_div_b(F, b)
 end
 
 function Rt_div_b(F, b)
+    # F.Rt \ b[F.pcol]
     y = similar(b)
     ldiv!(y, LowerTriangular(F.Rt), b[F.pcol])
     return y
-#    return F.Rt \ b[F.pcol]
 end

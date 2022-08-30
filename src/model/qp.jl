@@ -153,13 +153,6 @@ end
 function feasible(P::EqualityBoxProblem, z::PrimalDual)
     x = z.primal
     xmin, xmax = get_box(P)
-
-    #in_box = true
-    #@inbounds for i in 1:length(x)
-    #    in_box = in_box && (xmin[i] <= x[i] <= xmax[i])
-    #end
-
-    #return in_box
     return all(xmin .<= x .<= xmax)
 end
 

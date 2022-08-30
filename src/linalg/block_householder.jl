@@ -52,12 +52,12 @@ end
 # ====
 
 function Base.:*(Q::BlockyHouseholderQ, x::AbstractVector)
-    y = similar(Q.v_full)
+    y = zero(Q.v_full)
     return mul!(y, Q, x, 1, 0)
 end
 
 function Base.:*(Qt::Adjoint{<:Any, <:BlockyHouseholderQ}, x::AbstractVector)
-    y = similar(Qt.parent.v_red)
+    y = zero(Qt.parent.v_red)
     return mul!(y, Qt, x, 1, 0)
 end
 
@@ -76,7 +76,7 @@ function LinearAlgebra.mul!(
 
     _x = Q.v_full
     _x .= 0
-    @inbounds _x[1:Q.m] .= x
+    _x[1:Q.m] .= x
 
     # Main calculation
     @. y *= β
@@ -209,6 +209,9 @@ function make_householder_block(Q::SuiteSparse.SPQR.QRSparseQ, block, block_size
     W_low = hcat(Ws...)
     W = spzeros(n, r)
     W[nz_row, :] = W_low
+
+    @assert all(isfinite.(W))
+    @assert all(isfinite.(V))
 
     return W, V
 end

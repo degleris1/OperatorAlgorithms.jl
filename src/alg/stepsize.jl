@@ -36,7 +36,6 @@ function adjust_step!(dx, R::Backtracking, P::EqualityBoxProblem, x)
     residual!(r̂, P, x)
     nr = norm(r̂)  # Initial residual
     t = 1.0
-
     update!(x̂, x, t, dx)
 
     if feasible(P, x̂)
@@ -52,6 +51,7 @@ function adjust_step!(dx, R::Backtracking, P::EqualityBoxProblem, x)
         # Step rejected
         if t < 1e-20
             t = 0
+            break
         end
 
         update!(x̂, x, t, dx)
