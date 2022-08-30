@@ -84,7 +84,7 @@ function solve_cg!(u, K, b, num_iter; atol=1e-10, rtol=1e-4)
         
         @. p = r + (rho[iter+1] / rho[iter]) * p
     end
-    @show cnt, norm_b, sqrt(rho[end])
+    # @show cnt, norm_b, sqrt(rho[end])
 
     return u, cnt, sqrt(rho[end]) / norm_b
 end
@@ -99,23 +99,24 @@ function Rx(F, x)
 end
 
 function Rtx(F, x)
-    return (F.Rt * x)[invperm(F.pcol)]
+    return (F.Rt * x)[F.ipcol]
 end
 
 function Qx(F, x)
-    m, n = length(F.prow), length(F.pcol)
-    return (F.Q * x)[invperm(F.prow)]
+    return (F.Q * x)[F.iprow]
 end
 
 function Qtx(F, x)
-    m, n = length(F.prow), length(F.pcol)
     return F.Q' * x[F.prow]
 end
 
 function R_div_b(F, b)
-    return (F.R \ b)[invperm(F.pcol)]
+    return (F.R \ b)[F.ipcol]
 end
 
 function Rt_div_b(F, b)
-    return F.Rt \ b[F.pcol]
+    y = similar(b)
+    ldiv!(y, LowerTriangular(F.Rt), b[F.pcol])
+    return y
+#    return F.Rt \ b[F.pcol]
 end

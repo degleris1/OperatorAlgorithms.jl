@@ -1,7 +1,7 @@
 
-mutable struct PrimalDual{T <: Real}
-    primal::AbstractArray{T, 1}
-    dual::AbstractArray{T, 1}
+mutable struct PrimalDual{T <: Real, V <: AbstractVector{T}}
+    primal::V
+    dual::V
 end
 
 Base.zero(z::PrimalDual) = PrimalDual(zero(z.primal), zero(z.dual))

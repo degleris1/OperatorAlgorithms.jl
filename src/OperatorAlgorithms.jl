@@ -42,10 +42,11 @@ import NLPModels
 MOI = MathOptInterface
 
 ## Utilities
-using SparseArrays: spzeros, sparse, AbstractSparseMatrix
+using SparseArrays: spzeros, sparse
+using SparseArrays: AbstractSparseMatrix, AbstractSparseVector, SparseMatrixCSC, SparseVector
 using SuiteSparse.SPQR: QRSparseQ
-using LinearAlgebra: Adjoint, Diagonal, I
-using LinearAlgebra: dot, cond, svdvals, mul!, diag, qr
+using LinearAlgebra: Adjoint, Diagonal, LowerTriangular, UpperTriangular, I
+using LinearAlgebra: dot, cond, svdvals, mul!, ldiv!, diag, qr
 
 ## Modeling
 using NLPModels: get_x0, get_nvar, get_ncon

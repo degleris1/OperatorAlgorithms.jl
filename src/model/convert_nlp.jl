@@ -1,5 +1,14 @@
 
-function BoxQP(nlp; use_qr=false, block_size=64)
+function BoxQP(
+    nlp; 
+    use_qr=false, 
+    block_size=64,
+    t=Float64,
+    i=Int,
+    dv=Vector,
+    sv=SparseVector,
+    sm=SparseMatrixCSC,
+)
     eq_indices = _get_eq_indices(nlp)
     ineq_indices = _get_ineq_indices(nlp)
 
@@ -37,13 +46,13 @@ function BoxQP(nlp; use_qr=false, block_size=64)
     # Factorize equality constraint matrix
     @time if use_qr
         _F = qr(sparse(A'))
-        Q = BlockyHouseholderQ(_F.Q, block_size)
-        block_F = FancyQR(Q, _F.R, sparse(_F.R'), _F.prow, _F.pcol)
+        Q = BlockyHouseholderQ{t, sm{t, i}, dv{t}}(_F.Q, block_size)
+        block_F = FancyQR{t, i, sm{t, i}, dv{t}, dv{i}}(Q, _F.R, sparse(_F.R'), _F.prow, _F.pcol, invperm(_F.prow), invperm(_F.pcol))
     else
         block_F = nothing
     end
 
-    return BoxQuadraticProblem(c_q, c_l, c_0, A, b, xmin, xmax, block_F)
+    return BoxQuadraticProblem{t, i, dv{t}, dv{i}, sm{t, i}}(c_q, c_l, c_0, A, b, xmin, xmax, block_F)
 end
 
 function _jacobian(nlp)

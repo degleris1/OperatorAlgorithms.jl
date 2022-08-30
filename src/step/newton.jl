@@ -32,7 +32,8 @@ function step!(
     A = P.A
     H = hessian(P, z)
 
-    @show maximum(H.diag), minimum(H.diag[H.diag .> 0])
+    #@show maximum(H.diag), minimum(H.diag[H.diag .> 0])
+    @show pinf, dinf
 
     #println("Hessian Extrema: $(maximum(H.diag))")
     @. H.diag += safety

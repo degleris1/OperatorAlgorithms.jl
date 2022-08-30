@@ -2,7 +2,11 @@
 # BLOCKYQ TYPE
 # ====
 
-struct BlockyHouseholderQ{B, V}
+struct BlockyHouseholderQ{
+    T <: Real,
+    B <: AbstractMatrix{T}, 
+    V <: AbstractVector{T}
+}
     block_size::Int
     fwd_blocks::Vector{Tuple{B, B}}
     rev_blocks::Vector{Tuple{B, B}}
@@ -13,7 +17,7 @@ struct BlockyHouseholderQ{B, V}
     v_red::V
 end
 
-function BlockyHouseholderQ(Q::QRSparseQ, block_size=16)
+function BlockyHouseholderQ{T, B, V}(Q::QRSparseQ, block_size=16) where {T, B, V}
     fwd_blocks = blockify(Q, block_size)
     rev_blocks = reverse_blockify(Q, block_size)
 
@@ -24,7 +28,7 @@ function BlockyHouseholderQ(Q::QRSparseQ, block_size=16)
     v_full = zeros(n)
     v_red = zeros(m)
 
-    return BlockyHouseholderQ(block_size, fwd_blocks, rev_blocks, n, m, u, v_full, v_red)
+    return BlockyHouseholderQ{T, B, V}(block_size, fwd_blocks, rev_blocks, n, m, u, v_full, v_red)
 end
 
 # ====
@@ -48,12 +52,12 @@ end
 # ====
 
 function Base.:*(Q::BlockyHouseholderQ, x::AbstractVector)
-    y = zeros(eltype(x), Q.n)
+    y = similar(Q.v_full)
     return mul!(y, Q, x, 1, 0)
 end
 
 function Base.:*(Qt::Adjoint{<:Any, <:BlockyHouseholderQ}, x::AbstractVector)
-    y = zeros(eltype(x), Qt.parent.m)
+    y = similar(Qt.parent.v_red)
     return mul!(y, Qt, x, 1, 0)
 end
 

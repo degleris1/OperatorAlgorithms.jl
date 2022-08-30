@@ -2,12 +2,20 @@
 # CUSTOM QR TYPE
 # ====
 
-struct FancyQR{MT <: AbstractSparseMatrix{<: Real, <: Integer}}
-    Q::BlockyHouseholderQ{MT, <:Any}
-    R::MT
-    Rt::MT
-    prow::AbstractVector{Int}
-    pcol::AbstractVector{Int}
+struct FancyQR{
+    T <: Real,
+    I <: Integer,
+    M <: AbstractSparseMatrix{T, I},
+    V <: AbstractVector{T},
+    VI <: AbstractVector{I}
+}
+    Q::BlockyHouseholderQ{T, M, V}
+    R::M
+    Rt::M
+    prow::VI
+    pcol::VI
+    iprow::VI
+    ipcol::VI
 end
 
 # ====

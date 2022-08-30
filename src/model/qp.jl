@@ -1,29 +1,42 @@
 abstract type EqualityBoxProblem end
 
-struct BoxQuadraticProblem <: EqualityBoxProblem
-    c_q::AbstractVector{<: Real}
-    c_l::AbstractVector{<: Real}
+struct BoxQuadraticProblem{
+    T <: Real,
+    I <: Integer,
+    DV <: AbstractVector{T},
+    DVI <: AbstractVector{I},
+    SM <: AbstractSparseMatrix{T, I},
+} <: EqualityBoxProblem
+    c_q::DV
+    c_l::DV
     c_0::Real
-    A::AbstractSparseMatrix{<: Real}
-    b::AbstractVector{<: Real}
-    xmin::AbstractVector{<: Real}
-    xmax::AbstractVector{<: Real}
-    F_A::FancyQR{<: AbstractSparseMatrix{<: Real}}
+    A::SM
+    b::DV
+    xmin::DV
+    xmax::DV
+    F_A::FancyQR{T, I, SM, DV, DVI}
+end
+
+function send_to_gpu(P, dense_type, sparse_type)
+    F = P.F_A
+    Q = F.Q
+
+    return BoxQuadraticProblem(
+        dense_type(P.c_q),
+        dense_type(P.c_l),
+        dense_type(P.c_0),
+        sparse_type(P.A),
+        dense_type(P.b),
+        dense_type(P.xmin),
+        dense_type(P.xmax),
+    )
 end
 
 function initialize(P::EqualityBoxProblem)
     xmin, xmax = deepcopy(get_box(P))
 
-    for i in eachindex(xmin)
-        if xmin[i] == -Inf && xmax[i] == Inf
-            xmin[i] = -10
-            xmax[i] = 10
-        elseif xmin[i] == -Inf
-            xmin[i] = xmax[i] - 10
-        elseif xmax[i] == Inf
-            xmax[i] = xmin[i] + 10
-        end
-    end
+    xmin .= max.(xmin, minimum(xmin[xmin .!= -Inf]))
+    xmax .= min.(xmax, maximum(xmax[xmax .!= Inf]))
 
     x, y = zero(xmin), zero(P.b)
     x .= (1/2) .* (xmax - xmin) .+ xmin
@@ -107,10 +120,8 @@ end
 
 function gradient!(∇f, P::EqualityBoxProblem, z::PrimalDual)
     x = z.primal
-
     # ∇f = H*x + c
     @. ∇f = P.c_q * x + P.c_l
-
     return ∇f
 end
 
@@ -143,12 +154,13 @@ function feasible(P::EqualityBoxProblem, z::PrimalDual)
     x = z.primal
     xmin, xmax = get_box(P)
 
-    in_box = true
-    @inbounds for i in 1:length(x)
-        in_box = in_box && (xmin[i] <= x[i] <= xmax[i])
-    end
+    #in_box = true
+    #@inbounds for i in 1:length(x)
+    #    in_box = in_box && (xmin[i] <= x[i] <= xmax[i])
+    #end
 
-    return in_box
+    #return in_box
+    return all(xmin .<= x .<= xmax)
 end
 
 function project_box!(P::EqualityBoxProblem, z::PrimalDual)

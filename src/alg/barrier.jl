@@ -24,7 +24,7 @@ function barrier_method!(
         Pt = BarrierProblem(P, t)
 
         # Solve the barrier problem with initial iterate z0
-        it = something(inner_tol, max(ϵ, t*m / μ))
+        it = something(inner_tol, max(ϵ, t*sqrt(m)))
         z, history = descent!(
             step_rule, 
             Pt; 

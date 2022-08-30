@@ -1,12 +1,21 @@
 include("util.jl")
 
+using CUDA
+using SparseArrays
+using CUDA.CUSPARSE
+import CUDA.CUSPARSE: CuSparseVector, CuSparseMatrixCSC
+CUDA.allowscalar(false)
+
+CuSparseVector{T, I}(x::SparseVector) where {T, I} = CuSparseVector(x)
+CuSparseMatrixCSC{T, I}(x::SparseMatrixCSC) where {T, I} = CuSparseMatrixCSC(x)
+
 using Random
 Random.seed!(0)
 
 # case118, case300
 # case1354pegase, case2869pegase, case13659pegase
 # case_ACTIVSg2000, case_ACTIVSg10k, case_ACTIVSg70k
-opf = load_dc("matpower/case2869pegase.m")
+opf = load_dc("matpower/case118.m")
 
 # Baseline
 @time stats = solve_ipopt(opf)
@@ -15,6 +24,7 @@ scale = norm(NLPModels.grad(opf, x_opt))
 
 # Create problem
 P = BoxQP(opf; use_qr=true)
+# P = BoxQP(opf; use_qr=true, i=Int32, dv=CuVector, sv=CuSparseVector, sm=CuSparseMatrixCSC)
 
 # Specify inner problem solver
 step = NewtonStep(safety=1.0, solver=:schur_cg, num_cg_iter=250)
@@ -28,7 +38,7 @@ pstar = OperatorAlgorithms.objective(P, z)
 @show history.num_iter, sum(history.cg_iters)
 @show log10(minimum(history.infeasibility))
 @show log10( abs(pstar - stats.objective) / abs(stats.objective))
-plt = plot_diagnostics(history, x_opt)
+# plt = plot_diagnostics(history, x_opt)
 
 # using Profile
 # Profile.clear()
