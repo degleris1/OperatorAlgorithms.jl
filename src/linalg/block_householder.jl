@@ -28,7 +28,9 @@ function BlockyHouseholderQ{T, B, V}(Q::QRSparseQ, block_size=16) where {T, B, V
     v_full = zeros(n)
     v_red = zeros(m)
 
-    return BlockyHouseholderQ{T, B, V}(block_size, fwd_blocks, rev_blocks, n, m, u, v_full, v_red)
+    return BlockyHouseholderQ{T, B, V}(
+        block_size, fwd_blocks, rev_blocks, n, m, u, v_full, v_red
+    )
 end
 
 # ====
@@ -209,9 +211,6 @@ function make_householder_block(Q::SuiteSparse.SPQR.QRSparseQ, block, block_size
     W_low = hcat(Ws...)
     W = spzeros(n, r)
     W[nz_row, :] = W_low
-
-    @assert all(isfinite.(W))
-    @assert all(isfinite.(V))
 
     return W, V
 end

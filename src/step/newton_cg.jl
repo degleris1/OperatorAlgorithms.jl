@@ -29,8 +29,19 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
 
         b̂ = Rt_div_b(F, b̃)  # R' \ b̃
 
-        K = x -> Qtx(F, (H \ Qx(F, x)))  # K = Q' H Q x
-        u, cnt, cg_error = solve_cg!(u0, K, b̂, num_iter)
+        _x = zero(b1)
+        x_buf = zero(b1)
+        y_buf = zero(b2)
+
+        K! = (w, y) -> begin  # K = Q' * inv(H) * Q x
+            _x = Qx!(_x, F, y, x_buf, y_buf)
+            @. _x /= H.diag
+            w = Qtx!(w, F, _x, x_buf, y_buf)
+
+            return w
+        end
+
+        u, cnt, cg_error = solve_cg!(u0, K!, b̂, num_iter)
 
         dy .= R_div_b(F, u)  # R \ u
 
@@ -55,10 +66,10 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
 end
 
 # TODO: Cache r, p, w
-function solve_cg!(u, K, b, num_iter; atol=1e-10, rtol=1e-4)
+function solve_cg!(u, K!, b, num_iter; atol=1e-10, rtol=1e-4)
 
     u .= b  # The gradient direction is a good initial guess at the Newton direction
-    r = b - K(u)
+    r = b - K!(zero(u), u)
     
     p = copy(r)
     w = zero(b)
@@ -74,7 +85,7 @@ function solve_cg!(u, K, b, num_iter; atol=1e-10, rtol=1e-4)
 
         cnt += 1
 
-        w .= K(p)
+        w = K!(w, p)  # w .= K(p)
         α = rho[iter] / (p'w)
         
         @. u = u + α*p
@@ -91,32 +102,46 @@ end
 
 # ====
 # SPARSE QR OPERATIONS
-# (Since Julia sparse linear algebra is incomplete...)
 # ====
 
 function Rx(F, x)
-    return F.R * x[F.pcol]
+    @inbounds return F.R * x[F.pcol]
 end
 
 function Rtx(F, x)
-    return (F.Rt * x)[F.ipcol]
+    @inbounds return (F.Rt * x)[F.ipcol]
 end
 
 function Qx(F, x)
-    return (F.Q * x)[F.iprow]
+    @inbounds return (F.Q * x)[F.iprow]
+end
+
+function Qx!(z, F, y, x_buf, y_buf)
+    mul!(x_buf, F.Q, y)
+    @inbounds z .= x_buf[F.iprow]  # OPTIMIZE allocation
+    return z
 end
 
 function Qtx(F, x)
-    return F.Q' * x[F.prow]
+    @inbounds return F.Q' * x[F.prow]
+end
+
+function Qtx!(z, F, x, x_buf, y_buf)
+    @inbounds x_buf .= x[F.prow]  # OPTIMIZE allocation
+    mul!(z, F.Q', x_buf)
+    return z
 end
 
 function R_div_b(F, b)
-    return (F.R \ b)[F.ipcol]
+    # (F.R \ b)[F.ipcol)
+    y = zero(b)
+    ldiv!(y, UpperTriangular(F.R), b)
+    @inbounds return y[F.ipcol]
 end
 
 function Rt_div_b(F, b)
     # F.Rt \ b[F.pcol]
-    y = similar(b)
+    y = zero(b)
     ldiv!(y, LowerTriangular(F.Rt), b[F.pcol])
-    return y
+    @inbounds return y
 end

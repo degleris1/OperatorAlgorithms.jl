@@ -107,10 +107,10 @@ end
 function objective(P::EqualityBoxProblem, z::PrimalDual)
     x = z.primal
 
-    H = Diagonal(P.c_q)
+    h = P.c_q
     c = P.c_l
 
-    return (1/2) * dot(x, H, x) + c' * x + P.c_0
+    return (1/2) * x' * (h .* x) + c' * x + P.c_0
 end
 
 function gradient(P::EqualityBoxProblem, z::PrimalDual)

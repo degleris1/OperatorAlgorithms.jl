@@ -27,6 +27,8 @@ export GradientStep, NewtonStep
 
 # Imports
 ## Data Loading
+using CUDA
+
 using LazyArtifacts
 using Argos: ReducedSpaceEvaluator, OPFModel
 using NLPModelsJuMP: MathOptNLPModel
