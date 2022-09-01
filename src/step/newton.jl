@@ -32,9 +32,9 @@ function step!(
     A = P.A
     H = hessian(P, z)
 
-    #@show maximum(H.diag), minimum(H.diag[H.diag .> 0])
-    #@show pinf, dinf
-    #println("Hessian Extrema: $(maximum(H.diag))")
+    @show pinf, dinf
+    @show maximum(H.diag)
+    # println("Hessian Extrema: $(maximum(H.diag))")
     
     @. H.diag += safety
 
@@ -59,6 +59,8 @@ function step!(
     else
         error("Support solvers are [:explicit, :schur_cg]")
     end
+
+    # @show cnt
 
     return dz, (
         primal_infeasibility=pinf, 

@@ -34,10 +34,10 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
         y_buf = zero(b2)
 
         K! = (w, y) -> begin  # K = Q' * inv(H) * Q x
-            _x = Qx!(_x, F, y, x_buf, y_buf)
-            @. _x /= H.diag
-            w = Qtx!(w, F, _x, x_buf, y_buf)
-
+            # _x = Qx!(_x, F, y, x_buf, y_buf)
+            # @. _x /= H.diag
+            # w = Qtx!(w, F, _x, x_buf, y_buf)
+            w .= Qtx(F, Qx(F, y) ./ H.diag)
             return w
         end
 
@@ -66,7 +66,7 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
 end
 
 # TODO: Cache r, p, w
-function solve_cg!(u, K!, b, num_iter; atol=1e-10, rtol=1e-4)
+function solve_cg!(u, K!, b, num_iter; atol=1e-10, rtol=1e-3)
 
     u .= b  # The gradient direction is a good initial guess at the Newton direction
     r = b - K!(zero(u), u)

@@ -33,9 +33,14 @@ function adjust_step!(dx, R::Backtracking, P::EqualityBoxProblem, x)
     x̂ = get!(() -> zero(x), xhat, x)
     r̂ = get!(() -> zero(x), rhat, x)
 
+    t_max = max_step_in_box(P, x, dx)
+    @show t_max
+
     residual!(r̂, P, x)
     nr = norm(r̂)  # Initial residual
-    t = 1.0
+
+    # Set first x̂
+    t = min(1.0, t_max - sqrt(eps()))
     update!(x̂, x, t, dx)
 
     if feasible(P, x̂)
@@ -46,6 +51,7 @@ function adjust_step!(dx, R::Backtracking, P::EqualityBoxProblem, x)
     end
 
     while nr_hat > (1 - α * t) * nr
+        # @show nr_hat - nr
         t = β * t
 
         # Step rejected
@@ -65,5 +71,21 @@ function adjust_step!(dx, R::Backtracking, P::EqualityBoxProblem, x)
         end
     end
 
+    @show nr_hat
+
     return t
+end
+
+function max_step_in_box(P, z, dz)
+    x = z.primal
+    dx = dz.primal
+    xmin, xmax = get_box(P)
+
+    Δ_low = x - xmin
+    t_low = minimum(Δ_low ./ max.(0, -dx))
+
+    Δ_upp = xmax - x
+    t_upp = minimum(Δ_upp ./ max.(0, dx))
+
+    return min(t_low, t_upp)
 end

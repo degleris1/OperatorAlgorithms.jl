@@ -1,8 +1,19 @@
 
-function BoxQP(
+function BoxQP(opf; use_qr=true, block_size=16, rescale=false, cuda=false)
+    if cuda
+        return _BoxQP(opf; use_qr=use_qr, block_size=block_size, rescale=rescale,
+            i=Int32, dv=CuVector, sv=CuSparseVector, sm=CuSparseMatrixCSC)
+    else
+        return _BoxQP(opf; use_qr=use_qr, block_size=block_size, rescale=rescale)
+    end
+end
+
+
+function _BoxQP(
     nlp; 
     use_qr=false, 
     block_size=64,
+    rescale=false,
     t=Float64,
     i=Int,
     dv=Vector,
@@ -43,11 +54,39 @@ function BoxQP(
         end
     end
 
+    if rescale
+        # Set xmin := 0 (and set x̃ = x - xmin), or x = x̃ + xmin
+        # x <= xmax     --> x̃ <= xmax - xmin
+        # x >= xmin     --> x̃ >= 0
+        # Ax = b        --> Ax̃ = b - A*xmin
+        # x'Px + c'x 
+
+        bb = (xmin .!= -Inf)
+        δ = xmin[bb]
+
+        xmin[bb] .= 0
+        xmax[bb] .-= δ
+        b .-= A[:, bb] * δ
+        c_0 += (1/2) * δ' * (c_q[bb] .* δ) - c_l[bb]' * δ
+        c_l[bb] .-= δ .* c_q[bb]
+
+        # Scale everything so that xmax - xmin >= 1 (set x̃ = x ./ xmax), or x = Diagonal(xmax) * x̃
+        bu = (xmax .!= Inf)
+        δ = xmax[bu]
+
+        xmax[bu] ./= δ
+        A[:, bu] .= A[:, bu] * Diagonal(δ)
+        c_l[bu] .*= δ
+        c_q[bu] .*= δ .^ 2
+    end
+
     # Factorize equality constraint matrix
     @time if use_qr
         _F = qr(sparse(A'))
         Q = BlockyHouseholderQ{t, sm{t, i}, dv{t}}(_F.Q, block_size)
-        block_F = FancyQR{t, i, sm{t, i}, dv{t}, dv{i}}(Q, _F.R, sparse(_F.R'), _F.prow, _F.pcol, invperm(_F.prow), invperm(_F.pcol))
+        block_F = FancyQR{t, i, sm{t, i}, dv{t}, dv{i}}(
+            Q, _F.R, sparse(_F.R'), _F.prow, _F.pcol, invperm(_F.prow), invperm(_F.pcol)
+        )
     else
         block_F = nothing
     end

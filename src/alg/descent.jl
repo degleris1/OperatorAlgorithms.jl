@@ -24,6 +24,8 @@ function descent!(
         
         # Choose step size
         t = adjust_step!(dz, step_size, P, z)
+        @show t
+        #println()
 
         # Update history
         alg_info = (; step_size=t, alg_info...)

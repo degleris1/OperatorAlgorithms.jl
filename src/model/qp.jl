@@ -36,12 +36,11 @@ function initialize(P::EqualityBoxProblem)
     xmin, xmax = deepcopy(get_box(P))
 
     xmin .= max.(xmin, minimum(xmin[xmin .!= -Inf]))
-    xmax .= min.(xmax, maximum(xmax[xmax .!= Inf]))
+    xmax .= min.(xmax, maximum(xmax[xmax .!= Inf], init=maximum(xmin)+10))
 
     x, y = zero(xmin), zero(P.b)
     x .= (1/2) .* (xmax - xmin) .+ xmin
 
-    @show norm(P.A * x - P.b)
     @assert all(isfinite.(x))
 
     return PrimalDual(x, y)

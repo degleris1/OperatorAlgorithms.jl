@@ -9,7 +9,7 @@ export solve_ipopt
 
 ## Model
 export PrimalDual
-export BoxQP, BarrierProblem
+export BoxQP, BarrierProblem, PhaseOneProblem
 export apply_type
 
 ## Algorithm
@@ -28,6 +28,8 @@ export GradientStep, NewtonStep
 # Imports
 ## Data Loading
 using CUDA
+using CUDA.CUSPARSE
+import CUDA.CUSPARSE: CuSparseVector, CuSparseMatrixCSC
 
 using LazyArtifacts
 using Argos: ReducedSpaceEvaluator, OPFModel
@@ -71,6 +73,7 @@ include("linalg/qr.jl")
 ## Optimization problems
 include("model/qp.jl")
 include("model/barrier.jl")
+include("model/phase_one.jl")
 include("model/convert_nlp.jl")
 
 ## Algorithm core code
