@@ -17,52 +17,43 @@ struct BoxQuadraticProblem{
     F_A::FancyQR{T, I, SM, DV, DVI}
 end
 
-function send_to_gpu(P, dense_type, sparse_type)
-    F = P.F_A
-    Q = F.Q
-
-    return BoxQuadraticProblem(
-        dense_type(P.c_q),
-        dense_type(P.c_l),
-        dense_type(P.c_0),
-        sparse_type(P.A),
-        dense_type(P.b),
-        dense_type(P.xmin),
-        dense_type(P.xmax),
-    )
-end
-
-function initialize(P::EqualityBoxProblem)
+function initialize(P::EqualityBoxProblem; dual=false)
     xmin, xmax = deepcopy(get_box(P))
 
     xmin .= max.(xmin, minimum(xmin[xmin .!= -Inf]))
     xmax .= min.(xmax, maximum(xmax[xmax .!= Inf], init=maximum(xmin)+10))
 
-    x, y = zero(xmin), zero(P.b)
+    x, y, λ, μ = zero(xmin), zero(P.b), zero(xmin), zero(xmin)
     x .= (1/2) .* (xmax - xmin) .+ xmin
 
     @assert all(isfinite.(x))
 
-    return PrimalDual(x, y)
+    if dual
+        λ .= 1
+        μ .= 1
+    end
+
+    return PrimalDual(x, y, λ, μ)
 end
 
 # ====
 # RESIDUALS
 # ====
 
-function residual(P::EqualityBoxProblem, z::PrimalDual)
-    dz = similar(z)
-    return residual!(dz, P, z)
+function residual(P::EqualityBoxProblem, z::PrimalDual, t=0)
+    dz = zero(z)
+    return residual!(dz, P, z, t)
 end
 
-function residual!(dz, P::EqualityBoxProblem, z::PrimalDual)
+function residual!(dz, P::EqualityBoxProblem, z::PrimalDual, t=0)
     primal_residual!(dz.dual, P, z)
     dual_residual!(dz.primal, P, z)
+    centrality_residual!(dz.low_dual, dz.upp_dual, P, z, t)
     return dz
 end
 
 function primal_residual(P::EqualityBoxProblem, z::PrimalDual)
-    r = similar(z.dual)
+    r = zero(z.dual)
     return constraints!(r, P, z)
 end
 
@@ -73,30 +64,53 @@ function primal_residual!(rp, P::EqualityBoxProblem, z::PrimalDual)
 end
 
 function dual_residual(P::EqualityBoxProblem, z::PrimalDual)
-    rd = similar(z.primal)
+    rd = zero(z.primal)
     return dual_residual!(rd, P, z)
 end
 
 function dual_residual!(rd, P::EqualityBoxProblem, z::PrimalDual)
-    x, y = z.primal, z.dual
+    x, y, λ, μ = z.primal, z.dual, z.low_dual, z.upp_dual
     
+    # Gradient
     gradient!(rd, P, z)
+
+    # Equality dual
     mul!(rd, transpose(P.A), y, 1, 1)
+
+    # Inequality dual
+    @. rd -= λ
+    @. rd += μ
 
     return rd
 end
 
-function dual_residual(P::EqualityBoxProblem, z::PrimalDual, λmin, λmax)
+function dual_residual(P::EqualityBoxProblem, z::PrimalDual, λ, μ)
     xmin, xmax = get_box(P)
     x = z.primal
     
-    rd = similar(z.primal)
+    rd = zero(z.primal)
     
-    # r = r_barr - λmin + λmax
+    # r = r_bar - λ + μ
     dual_residual!(rd, P, z)
-    rd += -λmin + λmax
+    rd += -λ + μ
     
     return rd
+end
+
+function centrality_residual!(rcl, rcu, P::EqualityBoxProblem, z::PrimalDual, t)
+    x, λ, μ = z.primal, z.low_dual, z.upp_dual
+    xmin, xmax = get_box(P)
+    
+    @. rcl = -λ * (xmin - x) * isfinite(xmin) - t
+    @. rcu = -μ * (x - xmax) * isfinite(xmax) - t
+
+    return rcl, rcu
+end
+
+function centrality_residual(P::EqualityBoxProblem, z::PrimalDual, t)
+    rcl, rcu = zero(z.low_dual), zero(z.upp_dual)
+    centrality_residual!(rcl, rcu, P, z, t)
+    return rcl, rcu
 end
 
 # ====

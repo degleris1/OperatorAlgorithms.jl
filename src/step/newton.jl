@@ -3,43 +3,68 @@
 
 Take a step in the direction of the negative gradient.
 """
-Base.@kwdef struct NewtonStep <: AbstractStep
+Base.@kwdef mutable struct NewtonStep <: AbstractStep
     solver::Symbol = :explicit
     safety::Real = 0.0
     
     use_qr::Bool = true
     num_cg_iter::Int = 10
 
+    primal_dual = false
+    primal_dual_weight = 5.0
+
     _u0::IdDict = IdDict()
+    _centrality_weight = 0.0
 end
 
 # TODO: Eliminate gradient and Hessian allocations
 function step!(
     dz::PrimalDual{T}, rule::NewtonStep, P::EqualityBoxProblem, z::PrimalDual{T}
 ) where {T <: Real}
-    (; solver, safety, use_qr, num_cg_iter) = rule
+    (; solver, safety, use_qr, num_cg_iter, primal_dual, primal_dual_weight) = rule
+    
+    # Determine centrality weight
+    if primal_dual
+        rcl, rcu = centrality_residual(P, z, 0.0)
+        η = dot(z.low_dual, rcl) + dot(z.upp_dual, rcu)
+        rule._centrality_weight = η / (2 * primal_dual_weight * length(z.primal))
+    end
 
     # Compute gradient ∇L
-    residual!(dz, P, z)
+    τ = rule._centrality_weight
+    residual!(dz, P, z, τ)
     @. dz.dual = -dz.dual  # We want Ax - b, not b - Ax
 
     # Caclulate infeasibility
     pinf = norm(dz.dual)
     dinf = norm(dz.primal)
-    tinf = sqrt(pinf^2 + dinf^2)
+    cinf = sqrt(norm(dz.low_dual)^2 + norm(dz.upp_dual)^2)
+    tinf = sqrt(pinf^2 + dinf^2 + cinf^2)
 
-    # Construct Hessian and Jacobian  # TODO Optimize
+    @show pinf, dinf, τ
+
+    if !primal_dual
+        @assert cinf == 0.0
+        @assert iszero(rule._centrality_weight)
+    end
+
+    # Construct Hessian and Jacobian
     A = P.A
     H = hessian(P, z)
-
-    @show pinf, dinf
-    @show maximum(H.diag)
-    # println("Hessian Extrema: $(maximum(H.diag))")
-    
     @. H.diag += safety
 
-    # Report condition number
-    #println("Condition Number: $(maximum(H.diag) / minimum(H.diag))")
+    # Reduce system and update Hessian and dual residual
+    if primal_dual
+        x, λ, μ = z.primal, z.low_dual, z.upp_dual
+        xmin, xmax = get_box(P)
+
+        # Update dual residual
+        @. dz.primal += -dz.low_dual / (xmin - x)
+        @. dz.primal += dz.upp_dual / (x - xmax)
+
+        # Update Hessian
+        @. H.diag += λ / (x - xmin) + μ / (xmax - x)
+    end
 
     # Solve
     if solver == :explicit
@@ -60,7 +85,23 @@ function step!(
         error("Support solvers are [:explicit, :schur_cg]")
     end
 
-    # @show cnt
+    @show maximum(H.diag), cnt, cg_error
+    println()
+
+    # Update dλ, dμ
+    if primal_dual
+        x, λ, μ = z.primal, z.low_dual, z.upp_dual
+        xmin, xmax = get_box(P)
+
+        @. dz.low_dual = -(1 / (xmin - x)) * (-λ * dz.primal + dz.low_dual)
+        @. dz.upp_dual = -(1 / (x - xmax)) * (μ * dz.primal + dz.upp_dual)
+    end
+
+    # Flip signs for descent
+    @. dz.primal = -dz.primal
+    @. dz.dual = -dz.dual
+    @. dz.low_dual = -dz.low_dual
+    @. dz.upp_dual = -dz.upp_dual
 
     return dz, (
         primal_infeasibility=pinf, 
@@ -71,7 +112,6 @@ function step!(
     )
 end
 
-# TODO: Optimize
 function solve_explict!(dz, H, A)
     n, m = length(dz.primal), length(dz.dual)
 
@@ -83,11 +123,10 @@ function solve_explict!(dz, H, A)
 
     # Solve Newton system
     Δ = K \ [dz.primal; dz.dual]
-    #@show extrema(svdvals(Matrix(K)))
 
     # Update
-    @. dz.primal = -Δ[1:n]
-    @. dz.dual = -Δ[n+1:n+m]
+    @. dz.primal = Δ[1:n]
+    @. dz.dual = Δ[n+1:n+m]
 
     return dz
 end

@@ -59,9 +59,6 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
     # @show norm(H * dx + A' * dy - b1)
     # @show norm(A * dx - b2)
 
-    @. dz.primal = -dz.primal
-    @. dz.dual = -dz.dual
-
     return dz, cnt, cg_error
 end
 

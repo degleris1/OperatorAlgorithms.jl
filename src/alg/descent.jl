@@ -7,12 +7,13 @@ function descent!(
     step_size::AbstractStepSize=Backtracking(),
     stop::AbstractStoppingCriterion=FixedStop(),
     history=History(),
+    init_dual=false,
 )
     # Initialize
     started = false
     z = z0
     if isnothing(z)
-        z = initialize(P)
+        z = initialize(P; dual=init_dual)
     end
     dz = zero(z)
 
@@ -23,8 +24,7 @@ function descent!(
         dz, alg_info = step!(dz, step_rule, P, z)
         
         # Choose step size
-        t = adjust_step!(dz, step_size, P, z)
-        @show t
+        t = adjust_step!(dz, step_size, P, z, step_rule._centrality_weight)
         #println()
 
         # Update history
