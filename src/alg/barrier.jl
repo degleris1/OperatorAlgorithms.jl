@@ -12,7 +12,6 @@ function barrier_method!(
     θ=1.5,
     max_inner_step=500,
     verbose=0,
-    init_feasible=false,
 )
     @assert 1 < θ < 2
     @assert μ > 1
@@ -22,13 +21,6 @@ function barrier_method!(
     # Initialize
     z = something(z0, initialize(P))
     t = something(t0, get_t0(P, z, m, μ))
-
-    if init_feasible && norm(P.A*z.primal - P.b) > ϵ
-        @show size(P.A)
-        init_x = P.A \ P.b
-        @show norm(P.A * init_x - P.b)
-        z.primal .= init_x
-    end
 
     while (t*m) > ϵ
         # Formulate a barrier problem

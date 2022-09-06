@@ -27,20 +27,19 @@ end
 
 Backtracking(; α=0.01, β=0.8) = Backtracking(α, β, IdDict(), IdDict())
 
-function adjust_step!(dx, R::Backtracking, P::EqualityBoxProblem, x)
+function adjust_step!(dx, R::Backtracking, P::EqualityBoxProblem, x, τ=0)
     (; α, β, xhat, rhat) = R
 
     x̂ = get!(() -> zero(x), xhat, x)
     r̂ = get!(() -> zero(x), rhat, x)
 
     t_max = max_step_in_box(P, x, dx)
-    @show t_max
 
-    residual!(r̂, P, x)
+    residual!(r̂, P, x, τ)
     nr = norm(r̂)  # Initial residual
 
     # Set first x̂
-    t = min(1.0, t_max - sqrt(eps()))
+    t = 0.99 * min(1.0, t_max)
     update!(x̂, x, t, dx)
 
     if feasible(P, x̂)
@@ -64,14 +63,12 @@ function adjust_step!(dx, R::Backtracking, P::EqualityBoxProblem, x)
 
         # Update residual
         if feasible(P, x̂)
-            residual!(r̂, P, x̂)
+            residual!(r̂, P, x̂, τ)
             nr_hat = norm(r̂)
         else
             nr_hat = Inf
         end
     end
-
-    @show nr_hat
 
     return t
 end
@@ -87,5 +84,8 @@ function max_step_in_box(P, z, dz)
     Δ_upp = xmax - x
     t_upp = minimum(Δ_upp ./ max.(0, dx))
 
-    return min(t_low, t_upp)
+    t_dlow = minimum((z.low_dual .+ eps()) ./ max.(0, -dz.low_dual))
+    t_dupp = minimum((z.upp_dual .+ eps()) ./ max.(0, -dz.upp_dual))
+
+    return min(t_low, t_upp, t_dlow, t_dupp)
 end

@@ -55,29 +55,39 @@ function _BoxQP(
     end
 
     if rescale
+        # x̃ = α * x (x = inv(α) * x̃)
+        α = max.(1, [norm(A[:, j], Inf) for j in 1:size(A, 2)])
+
+        A = A * Diagonal(1 ./ α)
+
+        xmin = α .* xmin
+        xmax = α .* xmax 
+        c_l = c_l ./ α
+        c_q = c_q ./ α
+
         # Set xmin := 0 (and set x̃ = x - xmin), or x = x̃ + xmin
         # x <= xmax     --> x̃ <= xmax - xmin
         # x >= xmin     --> x̃ >= 0
         # Ax = b        --> Ax̃ = b - A*xmin
         # x'Px + c'x 
 
-        bb = (xmin .!= -Inf)
-        δ = xmin[bb]
+        # bb = (xmin .!= -Inf)
+        # δ = xmin[bb]
 
-        xmin[bb] .= 0
-        xmax[bb] .-= δ
-        b .-= A[:, bb] * δ
-        c_0 += (1/2) * δ' * (c_q[bb] .* δ) - c_l[bb]' * δ
-        c_l[bb] .-= δ .* c_q[bb]
+        # xmin[bb] .= 0
+        # xmax[bb] .-= δ
+        # b .-= A[:, bb] * δ
+        # c_0 += (1/2) * δ' * (c_q[bb] .* δ) - c_l[bb]' * δ
+        # c_l[bb] .-= δ .* c_q[bb]
 
-        # Scale everything so that xmax - xmin >= 1 (set x̃ = x ./ xmax), or x = Diagonal(xmax) * x̃
-        bu = (xmax .!= Inf)
-        δ = xmax[bu]
+        # # Scale everything so that xmax - xmin >= 1 (set x̃ = x ./ xmax), or x = diag(xmax) * x̃
+        # bu = (xmax .!= Inf)
+        # δ = min.(1, xmax[bu])
 
-        xmax[bu] ./= δ
-        A[:, bu] .= A[:, bu] * Diagonal(δ)
-        c_l[bu] .*= δ
-        c_q[bu] .*= δ .^ 2
+        # xmax[bu] ./= δ
+        # A[:, bu] .= A[:, bu] * Diagonal(δ)
+        # c_l[bu] .*= δ
+        # c_q[bu] .*= δ .^ 2
     end
 
     # Factorize equality constraint matrix
