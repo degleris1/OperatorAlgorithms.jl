@@ -2,14 +2,24 @@ using Pkg; Pkg.activate(@__DIR__)
 
 using LinearAlgebra
 using SparseArrays
+using MadNLP
+using Random
 using Plots
+
 import NLPModels
 
 using Revise
 using OperatorAlgorithms
 
+fnt = (Plots.GR.FONT_TIMES_ROMAN, 8)
 gr()
-theme(:default; label=nothing, titlefontsize=10, guidefontsize=10, tickfontsize=8)
+theme(:default; 
+    label=nothing, 
+    titlefont=fnt, 
+    guidefont=fnt, 
+    tickfont=fnt, 
+    legendfontsize=8,
+)
 OperatorAlgorithms.PowerModels.Memento.config!("error")
 
 function rolling(x, f=minimum)

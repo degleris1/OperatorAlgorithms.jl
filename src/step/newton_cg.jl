@@ -18,9 +18,12 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
 
     # Solve subsystem without QR
     if isnothing(qr_factors)
-        K = x -> A * (H \ (A' * x))
+        K! = (w, y) -> begin
+            w .= A * (H \ (A' * y))
+            return w
+        end 
 
-        u, cnt, cg_error = solve_cg!(u0, K, b̃, num_iter)
+        u, cnt, cg_error = solve_cg!(u0, K!, b̃, num_iter)
         dy .= u
 
     # Solve subsystem with QR

@@ -5,7 +5,7 @@ export BlockyHouseholderQ
 # Exports
 ## Helpers
 export load_dc, write_mps_dc, load_toy
-export solve_ipopt
+# export QrcgSolver
 
 ## Model
 export PrimalDual
@@ -63,6 +63,7 @@ using NLPModelsIpopt: ipopt
 
 ## Override
 import LinearAlgebra: norm
+import MadNLP
 
 # Code
 ## Primal dual object
@@ -92,6 +93,6 @@ include("step/newton_cg.jl")
 ## Utilities
 include("utils.jl")
 include("data.jl")
-include("ipopt.jl")
+# include("madnlp.jl")
 
 end

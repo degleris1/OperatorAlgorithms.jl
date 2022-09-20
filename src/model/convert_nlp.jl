@@ -1,10 +1,10 @@
 
-function BoxQP(opf; use_qr=true, block_size=16, rescale=false, cuda=false)
+function BoxQP(opf; use_qr=true, block_size=16, rescale=false, cuda=false, scale=1.0)
     if cuda
-        return _BoxQP(opf; use_qr=use_qr, block_size=block_size, rescale=rescale,
+        return _BoxQP(opf; use_qr=use_qr, block_size=block_size, rescale=rescale, scale=scale,
             i=Int32, dv=CuVector, sv=CuSparseVector, sm=CuSparseMatrixCSC)
     else
-        return _BoxQP(opf; use_qr=use_qr, block_size=block_size, rescale=rescale)
+        return _BoxQP(opf; use_qr=use_qr, block_size=block_size, rescale=rescale, scale=scale)
     end
 end
 
@@ -14,6 +14,7 @@ function _BoxQP(
     use_qr=false, 
     block_size=64,
     rescale=false,
+    scale=1.0,
     t=Float64,
     i=Int,
     dv=Vector,
@@ -37,6 +38,10 @@ function _BoxQP(
     c_q = sparse([diag(H); zeros(m)])
     c_l = sparse([_c; zeros(m)])
     c_0 = obj(nlp, u) - (1/2)*dot(u, H, u) - _c'u
+
+    c_q /= scale
+    c_l /= scale
+    c_0 /= scale
 
     # Construct equality constraints
     A = _jacobian(nlp)

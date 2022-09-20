@@ -8,6 +8,7 @@ function descent!(
     stop::AbstractStoppingCriterion=FixedStop(),
     history=History(),
     init_dual=false,
+    verbose=0,
 )
     # Initialize
     started = false
@@ -21,7 +22,7 @@ function descent!(
         started = true
         
         # Choose descent direction
-        dz, alg_info = step!(dz, step_rule, P, z)
+        dz, alg_info = step!(dz, step_rule, P, z; verbose=verbose)
         
         # Choose step size
         t = adjust_step!(dz, step_size, P, z, step_rule._centrality_weight)

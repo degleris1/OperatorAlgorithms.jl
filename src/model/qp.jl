@@ -14,7 +14,7 @@ struct BoxQuadraticProblem{
     b::DV
     xmin::DV
     xmax::DV
-    F_A::FancyQR{T, I, SM, DV, DVI}
+    F_A::Union{FancyQR{T, I, SM, DV, DVI}, Nothing}
 end
 
 function initialize(P::EqualityBoxProblem; dual=false)

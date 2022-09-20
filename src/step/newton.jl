@@ -19,7 +19,8 @@ end
 
 # TODO: Eliminate gradient and Hessian allocations
 function step!(
-    dz::PrimalDual{T}, rule::NewtonStep, P::EqualityBoxProblem, z::PrimalDual{T}
+    dz::PrimalDual{T}, rule::NewtonStep, P::EqualityBoxProblem, z::PrimalDual{T};
+    verbose=0,
 ) where {T <: Real}
     (; solver, safety, use_qr, num_cg_iter, primal_dual, primal_dual_weight) = rule
     
@@ -41,7 +42,9 @@ function step!(
     cinf = sqrt(norm(dz.low_dual)^2 + norm(dz.upp_dual)^2)
     tinf = sqrt(pinf^2 + dinf^2 + cinf^2)
 
-    @show pinf, dinf, τ
+    if (verbose >= 1)
+        @show pinf, dinf, τ
+    end
 
     if !primal_dual
         @assert cinf == 0.0
@@ -85,8 +88,10 @@ function step!(
         error("Support solvers are [:explicit, :schur_cg]")
     end
 
-    @show maximum(H.diag), cnt, cg_error
-    println()
+    if verbose >= 1
+        @show maximum(H.diag), cnt, cg_error
+        println()
+    end
 
     # Update dλ, dμ
     if primal_dual
