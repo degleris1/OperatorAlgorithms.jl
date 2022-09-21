@@ -1,6 +1,6 @@
 
 # TODO: Optimize
-function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
+function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing, precond=:id)
     @assert all(
         H.diag .> sqrt(eps())
     ) "Hessian nearly singular: index $(argmin(H.diag)), value $(minimum(H.diag))"
@@ -23,7 +23,21 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
             return w
         end 
 
-        u, cnt, cg_error = solve_cg!(u0, K!, b̃, num_iter)
+        if precond == :id
+            M = I
+        elseif precond == :diag
+            K_mat_diag = [dot(A[i, :], (H \ A[i, :])) for i in 1:size(A, 1)]
+            M = Diagonal(1 ./ K_mat_diag)
+        elseif precond == :norm
+            K_mat = A * inv(H) * A'
+            M = Diagonal(1 ./ [norm(K_mat[:, j], 1) for j in 1:size(K_mat, 2)])
+        else
+            @warn "Preconditioner $precond not recognized. No preconditioning applied."
+            M = I
+        end
+
+
+        u, cnt, cg_error = solve_cg!(u0, K!, b̃, num_iter, M)
         dy .= u
 
     # Solve subsystem with QR
@@ -44,7 +58,7 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
             return w
         end
 
-        u, cnt, cg_error = solve_cg!(u0, K!, b̂, num_iter)
+        u, cnt, cg_error = solve_cg!(u0, K!, b̂, num_iter, I)
 
         dy .= R_div_b(F, u)  # R \ u
 
@@ -66,20 +80,21 @@ function solve_schur_cg!(dz, H, A; num_iter=10, qr_factors=nothing, u0=nothing)
 end
 
 # TODO: Cache r, p, w
-function solve_cg!(u, K!, b, num_iter; atol=1e-10, rtol=1e-3)
+function solve_cg!(u, K!, b, num_iter, M; atol=1e-10, rtol=1e-3)
 
     u .= b  # The gradient direction is a good initial guess at the Newton direction
     r = b - K!(zero(u), u)
     
-    p = copy(r)
+    z = M*r
+    p = copy(z)
     w = zero(b)
 
-    rho = [norm(r)^2]
+    rho = [z'r]
     cnt = 0
     norm_b = norm(b)
 
     for iter in 1:num_iter
-        if sqrt(rho[iter]) < atol + rtol*norm_b
+        if (sqrt(rho[iter]) < atol + rtol*norm_b)
             break
         end
 
@@ -90,11 +105,14 @@ function solve_cg!(u, K!, b, num_iter; atol=1e-10, rtol=1e-3)
         
         @. u = u + α*p
         @. r = r - α*w
+
+        z .= M * r
         
-        push!(rho, norm(r)^2)
+        push!(rho, z'r)
         
-        @. p = r + (rho[iter+1] / rho[iter]) * p
+        @. p = z + (rho[iter+1] / rho[iter]) * p
     end
+    # @show norm(K!(zero(u), u) - b) / norm(b)
     # @show cnt, norm_b, sqrt(rho[end])
 
     return u, cnt, sqrt(rho[end]) / norm_b

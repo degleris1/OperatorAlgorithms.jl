@@ -9,6 +9,7 @@ Base.@kwdef mutable struct NewtonStep <: AbstractStep
     
     use_qr::Bool = true
     num_cg_iter::Int = 10
+    precond::Symbol = :id
 
     primal_dual = false
     primal_dual_weight = 5.0
@@ -22,7 +23,7 @@ function step!(
     dz::PrimalDual{T}, rule::NewtonStep, P::EqualityBoxProblem, z::PrimalDual{T};
     verbose=0,
 ) where {T <: Real}
-    (; solver, safety, use_qr, num_cg_iter, primal_dual, primal_dual_weight) = rule
+    (; solver, safety, use_qr, num_cg_iter, primal_dual, primal_dual_weight, precond) = rule
     
     # Determine centrality weight
     if primal_dual
@@ -81,8 +82,8 @@ function step!(
         # Load previous solution and QR factors
         u0 = get!(() -> zero(dz.dual), rule._u0, dz)
         qr_factors = use_qr ? P.F_A : nothing
-        dz, cnt, cg_error = 
-            solve_schur_cg!(dz, H, A; num_iter=num_cg_iter, qr_factors=qr_factors, u0=u0)
+        dz, cnt, cg_error = solve_schur_cg!(dz, H, A; 
+            num_iter=num_cg_iter, qr_factors=qr_factors, u0=u0, precond=precond)
     
     else
         error("Support solvers are [:explicit, :schur_cg]")

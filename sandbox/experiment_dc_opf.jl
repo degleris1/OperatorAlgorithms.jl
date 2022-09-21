@@ -9,6 +9,7 @@ max_cg_iter = 500_000
 safety = 1.0
 block_size = 256
 obj_scale = 1.0
+precond = :diag
 
 # Solve with QR
 CASES = Dict(
@@ -16,17 +17,16 @@ CASES = Dict(
         "case30",
         "case118",
         "case300",
-        "case1354pegase",
         "case_ACTIVSg2000",
+        "case1354pegase",
     ],
     true => [
     "case30",
     "case118",
     "case300",
-    "case1354pegase",
-    "case2869pegase",
-    "case13659pegase",
     "case_ACTIVSg2000",
+    "case1354pegase",
+    "case13659pegase",
     ]
 )
 
@@ -40,7 +40,13 @@ for use_qr in [false, true]
         scale = norm(NLPModels.grad(opf, stats.solution))
 
         P = BoxQP(opf; use_qr=use_qr, block_size=block_size, scale=obj_scale)
-        step = NewtonStep(primal_dual=true, safety=safety, solver=:schur_cg, num_cg_iter=max_cg_iter)
+        step = NewtonStep(
+            primal_dual=true, 
+            safety=safety, 
+            solver=:schur_cg, 
+            num_cg_iter=max_cg_iter,
+            precond=precond,
+        )
         runtime = @elapsed z, history = descent!(step, P; 
             stop=FixedStop(100, rtol*scale), init_dual=true, verbose=1)
 
